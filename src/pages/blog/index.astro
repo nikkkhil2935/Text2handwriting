@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { BLOG_POSTS } from '../../lib/blog-data';
+import AdSlot from '../../components/common/AdSlot.astro';
+---
+
+<BaseLayout
+  title="Handwriting Automation Guides & Writing Blog"
+  description="Read articles and tutorials on automating school assignments, choosing handwriting fonts, setting up realistic jitter engines, and printing high-res notes."
+  activeTab="blog"
+  showHeroGradient={true}
+>
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <!-- Ad Slot: Below header -->
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Writing Guides & Blog</h1>
+      <p class="text-xs text-mute font-mono mt-1">Tutorials, ideas, and automation strategies from the Text to Handwriting team.</p>
+    </div>
+
+    <!-- Blog Posts Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+      {BLOG_POSTS.map(post => (
+        <article class="border border-hairline bg-canvas rounded-lg p-6 flex flex-col gap-4 shadow-sm hover:shadow-md hover:border-hairline-strong transition-all relative group">
+          <div class="flex items-center space-x-2 text-[10px] font-mono text-mute">
+            <span>{post.date}</span>
+            <span>•</span>
+            <span>{post.readTime}</span>
+            <span>•</span>
+            <span class="bg-canvas-soft-2 px-2 py-0.5 rounded text-primary uppercase font-semibold">{post.category}</span>
+          </div>
+
+          <h2 class="text-base font-semibold text-primary font-mono group-hover:text-link transition-colors">
+            <a href={`/blog/${post.slug}`}>{post.title}</a>
+          </h2>
+
+          <p class="text-xs text-body leading-relaxed flex-grow">{post.description}</p>
+
+          <a
+            href={`/blog/${post.slug}`}
+            class="text-[10px] font-mono text-link hover:underline font-semibold flex items-center space-x-1 justify-end mt-2"
+          >
+            <span>READ ARTICLE</span>
+            <span>→</span>
+          </a>
+        </article>
+      ))}
+    </div>
+
+    <!-- Ad Slot: Above footer -->
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BulkApp from '../components/bulk/BulkApp';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const bulkSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  'name': 'Text to Handwriting Bulk Generator',
+  'operatingSystem': 'Any',
+  'applicationCategory': 'EducationalApplication',
+  'description': 'Process multiple document text blocks or CSV datasets simultaneously into sequential handwritten pages. Export batches as combined PDFs or structured ZIP files.',
+  'offers': {
+    '@type': 'Offer',
+    'price': '0.00',
+    'priceCurrency': 'USD'
+  }
+};
+---
+
+<BaseLayout 
+  title="Bulk Handwriting Generator - Create Multiple Handwritten Pages in Parallel"
+  description="Upload CSV sheets or paste text chunks with delimiters to auto-convert multiple documents into handwriting sequentially. Includes queue indicators, overrides, and ZIP/PDF downloads."
+  activeTab="bulk"
+  showHeroGradient={true}
+  fullWidth={true}
+  schema={bulkSchema}
+>
+  <div class="space-y-6">
+    <!-- Ad Slot: Below header -->
+    <AdSlot slotId="header-leaderboard" />
+
+    <BulkApp client:load />
+
+    <!-- Ad Slot: Above footer -->
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

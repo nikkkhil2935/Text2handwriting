@@ -1,11 +1,70 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ConverterApp from '../components/converter/ConverterApp';
+import AdSlot from '../components/common/AdSlot.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// JSON-LD SoftwareApplication schema for SEO
+const appSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  'name': 'Text to Handwriting Converter',
+  'operatingSystem': 'Any',
+  'applicationCategory': 'EducationalApplication',
+  'offers': {
+    '@type': 'Offer',
+    'price': '0.00',
+    'priceCurrency': 'USD'
+  },
+  'description': 'Convert digital text into highly realistic handwritten pages. Customize margins, rules, pen pressure, baseline slants, and download as printable PDFs or image ZIP files.',
+  'browserRequirements': 'Requires JavaScript and HTML5 Canvas support.'
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': [
+    {
+      '@type': 'Question',
+      'name': 'How do I generate realistic handwriting from text?',
+      'acceptedAnswer': {
+        '@type': 'Answer',
+        'text': 'Type or paste your text into the editor, select a font and paper background style, and adjust the messiness multiplier. Our realism engine adds random character rotation, vertical jitter, line baseline drift, and pressure variations to simulate natural writing.'
+      }
+    },
+    {
+      '@type': 'Question',
+      'name': 'Can I download the output as a PDF?',
+      'acceptedAnswer': {
+        '@type': 'Answer',
+        'text': 'Yes! You can export single or multiple pages as a print-ready PDF (A4, Letter, or Legal) at standard or high resolution (300dpi).'
+      }
+    }
+  ]
+};
+
+const pageSchema = {
+  '@graph': [appSchema, faqSchema]
+};
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<BaseLayout 
+  title="Text to Handwriting Converter - Realistic Handwritten Notes Maker"
+  description="Convert your digital notes and assignments into highly realistic handwritten pages. Pick from 20 handwriting fonts, customize grids, margins, baseline drift, and export as PDF/ZIP."
+  activeTab="home"
+  showHeroGradient={true}
+  fullWidth={true}
+  schema={pageSchema}
+>
+  <div class="space-y-6">
+    
+    <!-- Ad Slot: Below header on tool page -->
+    <AdSlot slotId="header-leaderboard" />
+
+    <!-- Core Interactive Island -->
+    <ConverterApp client:load />
+
+    <!-- Ad Slot: Above footer -->
+    <AdSlot slotId="footer-leaderboard" />
+    
+  </div>
+</BaseLayout>

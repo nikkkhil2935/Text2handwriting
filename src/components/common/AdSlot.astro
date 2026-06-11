@@ -1,0 +1,41 @@
+---
+import { AD_CONFIGS } from '../../config/ads';
+
+interface Props {
+  slotId: string;
+  size?: 'leaderboard' | 'rectangle' | 'sidebar' | 'in-content';
+  enabled?: boolean;
+}
+
+const { slotId, size, enabled } = Astro.props;
+
+// Pull from central config, override with props if passed
+const config = AD_CONFIGS[slotId];
+const isEnabled = enabled !== undefined ? enabled : (config?.enabled ?? false);
+const adSize = size || config?.size || 'leaderboard';
+
+// Sizing mapping for AdSense container
+let sizeClasses = '';
+if (adSize === 'leaderboard') {
+  sizeClasses = 'w-full max-w-[728px] h-[90px] md:h-[90px] min-h-[90px]';
+} else if (adSize === 'rectangle') {
+  sizeClasses = 'w-[300px] h-[250px] min-w-[300px] min-h-[250px]';
+} else if (adSize === 'sidebar') {
+  sizeClasses = 'w-[160px] h-[600px] min-w-[160px] min-h-[600px]';
+} else if (adSize === 'in-content') {
+  sizeClasses = 'w-full max-w-[336px] md:max-w-[580px] h-[280px] min-h-[280px]';
+}
+---
+
+{isEnabled && (
+  <div 
+    id={`ad-${slotId}`} 
+    class={`bg-canvas-soft-2 border border-hairline flex items-center justify-center text-xs text-mute rounded ${sizeClasses} ${config?.className || ''}`}
+    data-ad-slot={slotId}
+  >
+    <div class="text-center font-mono">
+      <div class="text-[10px] uppercase tracking-wider text-mute mb-1">Advertisement</div>
+      <div class="text-body font-semibold">{slotId} ({adSize})</div>
+    </div>
+  </div>
+)}

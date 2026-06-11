@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { BLOG_POSTS } from '../../lib/blog-data';
+import AdSlot from '../../components/common/AdSlot.astro';
+
+export async function getStaticPaths() {
+  return BLOG_POSTS.map(post => ({
+    params: { slug: post.slug },
+    props: { post }
+  }));
+}
+
+const { post } = Astro.props;
+
+// Related posts resolver
+const relatedPosts = BLOG_POSTS.filter(p => post.relatedSlugs?.includes(p.slug));
+
+// Inject structured data for the article page
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  'headline': post.title,
+  'description': post.description,
+  'datePublished': post.date,
+  'author': {
+    '@type': 'Organization',
+    'name': 'Text to Handwriting'
+  },
+  'publisher': {
+    '@type': 'Organization',
+    'name': 'Text to Handwriting',
+    'logo': {
+      '@type': 'ImageObject',
+      'url': 'https://scribblecraft.com/favicon.svg'
+    }
+  }
+};
+---
+
+<BaseLayout
+  title={post.title}
+  description={post.description}
+  activeTab="blog"
+  schema={articleSchema}
+>
+  <article class="max-w-3xl mx-auto space-y-6">
+    
+    <!-- Breadcrumbs -->
+    <nav class="text-[10px] font-mono text-mute uppercase flex items-center space-x-1.5 border-b border-hairline pb-4">
+      <a href="/" class="hover:text-primary">Home</a>
+      <span>/</span>
+      <a href="/blog" class="hover:text-primary">Blog</a>
+      <span>/</span>
+      <span class="text-body font-semibold truncate max-w-[200px]">{post.title}</span>
+    </nav>
+
+    <!-- Ad Slot: Below header -->
+    <AdSlot slotId="header-leaderboard" />
+
+    <!-- Article Header -->
+    <header class="space-y-3">
+      <div class="flex items-center space-x-2 text-[10px] font-mono text-mute">
+        <span>{post.date}</span>
+        <span>•</span>
+        <span>{post.readTime}</span>
+        <span>•</span>
+        <span class="text-link font-semibold uppercase">{post.category}</span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary font-mono leading-tight">{post.title}</h1>
+      <p class="text-xs text-mute font-mono">Written by {post.author}</p>
+    </header>
+
+    <!-- Main Content Body (Structured Prose) -->
+    <div 
+      class="prose dark:prose-invert max-w-none text-xs md:text-sm text-body leading-relaxed space-y-4 pt-4 border-t border-hairline
+        [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-primary [&_h2]:font-mono [&_h2]:pt-4 [&_h2]:pb-1
+        [&_p]:text-body [&_p]:leading-relaxed
+        [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5
+        [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5
+        [&_pre]:bg-canvas-soft-2 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:border [&_pre]:border-hairline [&_pre]:font-mono [&_pre]:text-xs
+        [&_code]:text-primary [&_code]:font-mono [&_code]:bg-canvas-soft-2 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs
+        [&_blockquote]:border-l-4 [&_blockquote]:border-hairline-strong [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-mute [&_blockquote]:my-4"
+      set:html={post.content}
+    />
+
+    <!-- Ad Slot: Between blog contents (mocked bottom of article) -->
+    <AdSlot slotId="blog-in-content" />
+
+    <!-- Related Articles Footer -->
+    {relatedPosts.length > 0 && (
+      <footer class="border-t border-hairline pt-6 mt-8 space-y-4">
+        <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Related Writing</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {relatedPosts.map(rel => (
+            <a 
+              href={`/blog/${rel.slug}`} 
+              class="block border border-hairline bg-canvas hover:border-hairline-strong p-4 rounded-lg shadow-sm transition-all group"
+            >
+              <span class="text-[9px] font-mono text-mute">{rel.date}</span>
+              <h5 class="text-xs font-semibold text-primary group-hover:text-link transition-colors font-mono mt-1">{rel.title}</h5>
+            </a>
+          ))}
+        </div>
+      </footer>
+    )}
+
+  </article>
+</BaseLayout>
