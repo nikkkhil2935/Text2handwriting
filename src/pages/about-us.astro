@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const aboutSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'AboutPage',
+  'name': 'About Us - ScribbleCraft Text to Handwriting',
+  'description': 'Learn about the history and mission of ScribbleCraft, the leading realistic text-to-handwriting platform for students, educators, and creative professionals.',
+  'publisher': {
+    '@type': 'Organization',
+    'name': 'ScribbleCraft',
+    'logo': {
+      '@type': 'ImageObject',
+      'url': 'https://scribblecraft.com/favicon.svg'
+    }
+  }
+};
+---
+
+<BaseLayout
+  title="About Us - Our Mission & Story"
+  description="Discover the story behind ScribbleCraft, our advanced browser-based handwriting engine, and how we help students, teachers, and creators make realistic handwriting pages."
+  activeTab="about"
+  schema={aboutSchema}
+>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">About ScribbleCraft</h1>
+      <p class="text-xs text-mute font-mono mt-1">Our mission to bridge digital productivity and handwritten charm.</p>
+    </div>
+
+    <div class="space-y-6 text-xs md:text-sm text-body leading-relaxed">
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Our Origin Story</h2>
+      <p>
+        ScribbleCraft was founded with a simple observation: in an increasingly paperless world, the warmth, authenticity, and personal connection of handwriting are being lost. Students spend hours transcribing assignments, teachers struggle to generate engaging handwriting practice sheets, and creators search for custom cursive letters.
+      </p>
+      <p>
+        To solve this, we designed a browser-based handwriting generator that compiles digital text into authentic handwritten pages. By utilizing modern web technologies like the HTML5 Canvas API and Web Workers, we build handwriting pages with per-character slants, ink bleed simulations, and graphite textures.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Our Mission & Commitment</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        <div class="border border-hairline p-4 rounded bg-canvas-soft">
+          <h4 class="font-bold text-primary font-mono text-xs mb-1">Empowering Students</h4>
+          <p class="text-xs">
+            Save time formatting homework and practical records. Choose from neat printing styles to submit clean assignments in seconds.
+          </p>
+        </div>
+        <div class="border border-hairline p-4 rounded bg-canvas-soft">
+          <h4 class="font-bold text-primary font-mono text-xs mb-1">Supporting Teachers</h4>
+          <p class="text-xs">
+            Generate printable writing practice sheets, customized worksheets, and classroom templates without paper waste.
+          </p>
+        </div>
+        <div class="border border-hairline p-4 rounded bg-canvas-soft">
+          <h4 class="font-bold text-primary font-mono text-xs mb-1">Inspiring Creators</h4>
+          <p class="text-xs">
+            Create custom letters, cursive designs, unique signatures, and styled notebooks for personal journal spreads.
+          </p>
+        </div>
+      </div>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Privacy-First Architecture</h2>
+      <p>
+        Unlike many modern SaaS platforms, ScribbleCraft is engineered with absolute respect for user data privacy. **We do not upload your text, sketches, formulas, or images to our servers**. 
+      </p>
+      <p>
+        The entire rendering workflow runs locally inside your browser via client-side JavaScript, Canvas drawing, and background Web Workers. Your documents, signatures, and personal notes remain entirely on your device, making ScribbleCraft a safe and secure choice for students, educators, and businesses alike.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Explore ScribbleCraft</h2>
+      <p>
+        Ready to make your first document? Check out our range of handwriting and design tools:
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 font-medium">
+        <li><a href="/" class="text-link hover:underline">Single Page Text-to-Handwriting Converter</a></li>
+        <li><a href="/bulk-generator" class="text-link hover:underline">Bulk Document Queue Generator</a></li>
+        <li><a href="/text-to-cursive" class="text-link hover:underline">Cursive Script Writing Generator</a></li>
+        <li><a href="/signature-generator" class="text-link hover:underline">Online Handwritten Signature Maker</a></li>
+        <li><a href="/notebook-paper-generator" class="text-link hover:underline">Custom Lined & Graph Paper Maker</a></li>
+        <li><a href="/handwriting-font-preview" class="text-link hover:underline">Compare Handwriting Fonts Side-by-Side</a></li>
+        <li><a href="/assignment-formatter" class="text-link hover:underline">Academic Assignment Page Formatter</a></li>
+      </ul>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

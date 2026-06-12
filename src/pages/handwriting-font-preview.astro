@@ -1,0 +1,90 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FontPreviewApp from '../components/fonts/FontPreviewApp';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const fontsSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  'name': 'Online Handwriting Font Previewer',
+  'operatingSystem': 'Any',
+  'applicationCategory': 'UtilitiesApplication',
+  'description': 'Preview and compare 20+ realistic handwriting fonts side-by-side. Enter your own text phrases and adjust font dimensions instantly.',
+  'offers': {
+    '@type': 'Offer',
+    'price': '0.00',
+    'priceCurrency': 'USD'
+  }
+};
+---
+
+<BaseLayout 
+  title="Handwriting Font Previewer - Compare 20+ Realistic Handwriting Fonts"
+  description="Compare and preview the best handwriting fonts side-by-side online. Choose from messy print, neat cursive, flowing signatures, and calligraphy fonts."
+  activeTab="home"
+  showHeroGradient={true}
+  fullWidth={true}
+  schema={fontsSchema}
+>
+  <div class="space-y-6">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Handwriting Font Preview Catalog</h1>
+      <p class="text-xs text-mute font-mono">Test and compare all 20+ cursive, neat print, kids, and signature fonts side-by-side.</p>
+    </div>
+
+    <FontPreviewApp client:load />
+
+    <!-- Rich SEO Content Section (600+ Words) -->
+    <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">The Art of Digital Handwriting Typography</h2>
+          <p>
+            When converting typed text to handwriting, the font choice determines the credibility of the output. If you are submitting school assignments or sending personalized letters, using a standard font library makes the page look artificial.
+          </p>
+          <p>
+            Our handwriting font preview tool is designed to help you analyze and choose the perfect script variant. By rendering a single test sentence across 20+ different fonts simultaneously, you can find the style that matches your preferred neatness, slant, and flow.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Classifying Handwriting Font Styles</h2>
+          <p>
+            To help you navigate, we classify our handwriting catalog into distinct categories:
+          </p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Neat & Clean:</strong> Fonts like <em>Architects Daughter</em> and <em>Patrick Hand</em>. Highly legible, well-aligned, and ideal for formal academic assignments.</li>
+            <li><strong>Cursive & Script:</strong> Styles like <em>Dancing Script</em> and <em>Pacifico</em>. Elegant, continuous characters that imitate cursive fountain pens.</li>
+            <li><strong>Messy & Jotted:</strong> Fonts like <em>Reenie Beanie</em> and <em>Nothing You Could Do</em>. Simulates quick jotting, diary notes, and study logs.</li>
+            <li><strong>Flowing Signatures:</strong> Scripts like <em>Alex Brush</em> and <em>Mr De Haviland</em>, designed to create signature initials.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">How to Make Digital Fonts Look Truly Handwritten</h2>
+        <p>
+          Selecting a good font is only the first step. To bypass automated check algorithms and make your homework printouts look fully authentic:
+        </p>
+        <ol class="list-decimal pl-5 space-y-1.5">
+          <li><strong>Add Slant Jitter:</strong> Ensure you adjust the letter rotation slant slightly (±2°). Humans do not write on perfectly straight guidelines.</li>
+          <li><strong>Vary line heights:</strong> Change line spacings to be slightly loose or tight. Tight lines make messy fonts look more compressed and organic.</li>
+          <li><strong>Use Lined Notebook Backgrounds:</strong> Placing text on ruled notebook guidelines makes character alignments look natural. Ensure you align your font size to match the line heights.</li>
+          <li><strong>Enable Graphite smudge overlays:</strong> Smudge layers add very faint background pencil dust which prints beautifully on real paper.</li>
+        </ol>
+      </div>
+
+      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
+        <h3 class="text-xs font-mono font-bold uppercase text-primary">Explore Cursive and signature Generators</h3>
+        <p class="text-xs">
+          Ready to generate cursive notes? Hop over to the <a href="/text-to-cursive" class="text-link hover:underline">cursive handwriting maker</a>, create digital electronic signatures with our <a href="/signature-generator" class="text-link hover:underline">signature generator</a>, or bulk convert documents with the <a href="/bulk-generator" class="text-link hover:underline">bulk generator tool</a>.
+        </p>
+      </div>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

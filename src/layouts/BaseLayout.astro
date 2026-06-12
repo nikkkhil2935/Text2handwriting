@@ -90,12 +90,7 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
     <!-- Inline script to handle theme immediately to prevent flashing -->
     <script is:inline>
       (function() {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.remove('dark');
       })();
     </script>
   </head>
@@ -118,12 +113,15 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
         <nav class="hidden lg:flex items-center space-x-1 text-sm font-medium">
           <a href="/" class={`px-3 py-1.5 rounded-full transition-colors ${activeTab === 'home' ? 'text-primary bg-canvas-soft-2 font-semibold' : 'text-body hover:text-primary hover:bg-canvas-soft-2/50'}`}>Text Converter</a>
           <a href="/bulk-generator" class={`px-3 py-1.5 rounded-full transition-colors ${activeTab === 'bulk' ? 'text-primary bg-canvas-soft-2 font-semibold' : 'text-body hover:text-primary hover:bg-canvas-soft-2/50'}`}>Bulk Generator</a>
+          <a href="/text-to-cursive" class={`px-3 py-1.5 rounded-full transition-colors ${activeTab === 'cursive' ? 'text-primary bg-canvas-soft-2 font-semibold' : 'text-body hover:text-primary hover:bg-canvas-soft-2/50'}`}>Cursive Maker</a>
+          <a href="/signature-generator" class={`px-3 py-1.5 rounded-full transition-colors ${activeTab === 'signature' ? 'text-primary bg-canvas-soft-2 font-semibold' : 'text-body hover:text-primary hover:bg-canvas-soft-2/50'}`}>Signature Maker</a>
+          <a href="/notebook-paper-generator" class={`px-3 py-1.5 rounded-full transition-colors ${activeTab === 'notebook' ? 'text-primary bg-canvas-soft-2 font-semibold' : 'text-body hover:text-primary hover:bg-canvas-soft-2/50'}`}>Notebook Paper</a>
         </nav>
       </div>
       
       <div class="flex items-center space-x-4">
-        <!-- Dark/Light Mode Toggle -->
-        <button id="theme-toggle" class="p-2 rounded-full border border-hairline bg-canvas hover:bg-canvas-soft text-body hover:text-primary cursor-pointer transition-colors shadow-sm" aria-label="Toggle dark mode">
+        <!-- Dark/Light Mode Toggle (Hidden for v1) -->
+        <button id="theme-toggle" class="hidden p-2 rounded-full border border-hairline bg-canvas hover:bg-canvas-soft text-body hover:text-primary cursor-pointer transition-colors shadow-sm" aria-label="Toggle dark mode">
           <!-- Light Mode Icon (Sun) -->
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="block dark:hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
           <!-- Dark Mode Icon (Moon) -->
@@ -148,9 +146,18 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
-      <nav class="flex flex-col space-y-4 text-lg font-medium mb-8">
-        <a href="/" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Text to Handwriting</a>
+      <nav class="flex flex-col space-y-2 text-sm font-mono mb-8 overflow-y-auto max-h-[60vh]">
+        <a href="/" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Text Converter</a>
         <a href="/bulk-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Bulk Generator</a>
+        <a href="/text-to-cursive" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Cursive Maker</a>
+        <a href="/signature-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Signature Maker</a>
+        <a href="/notebook-paper-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Notebook Paper</a>
+        <a href="/handwriting-font-preview" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Font Preview</a>
+        <a href="/assignment-formatter" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Assignment Formatter</a>
+        <a href="/faq" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">FAQ</a>
+        <a href="/blog" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Blog</a>
+        <a href="/about-us" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">About Us</a>
+        <a href="/contact-us" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Contact Us</a>
       </nav>
       <div class="mt-auto pt-6 border-t border-hairline text-center">
         <p class="text-xs text-mute font-mono">scribblecraft.com</p>
@@ -182,27 +189,37 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
           <ul class="space-y-2 text-xs font-medium text-body">
             <li><a href="/" class="hover:text-primary transition-colors">Single Text Converter</a></li>
             <li><a href="/bulk-generator" class="hover:text-primary transition-colors">Bulk Handwriting Maker</a></li>
-            <li><a href="/blog" class="hover:text-primary transition-colors">Writing Guides & Blog</a></li>
+            <li><a href="/text-to-cursive" class="hover:text-primary transition-colors">Cursive Script Maker</a></li>
+            <li><a href="/signature-generator" class="hover:text-primary transition-colors">Signature Generator</a></li>
+            <li><a href="/notebook-paper-generator" class="hover:text-primary transition-colors">Notebook Paper Maker</a></li>
+            <li><a href="/handwriting-font-preview" class="hover:text-primary transition-colors">Font Showcase Preview</a></li>
+            <li><a href="/assignment-formatter" class="hover:text-primary transition-colors">Assignment Formatter</a></li>
           </ul>
         </div>
         <div>
-          <h4 class="text-xs font-mono uppercase font-semibold text-primary mb-4 tracking-wider">Support</h4>
+          <h4 class="text-xs font-mono uppercase font-semibold text-primary mb-4 tracking-wider">Info & Support</h4>
           <ul class="space-y-2 text-xs font-medium text-body">
-            <li><span class="text-mute font-mono">DPI: 300 (Print Quality)</span></li>
-            <li><span class="text-mute font-mono">Fonts: 23 variables</span></li>
-            <li><span class="text-mute font-mono">Languages: English, Hindi, Devanagari</span></li>
+            <li><a href="/faq" class="hover:text-primary transition-colors">Help & FAQ Hub</a></li>
+            <li><a href="/about-us" class="hover:text-primary transition-colors">About ScribbleCraft</a></li>
+            <li><a href="/contact-us" class="hover:text-primary transition-colors">Contact Support</a></li>
+            <li><a href="/blog" class="hover:text-primary transition-colors">Writing Blog & Guides</a></li>
+            <li><span class="text-mute font-mono text-[10px]">DPI: 300 (Print Quality)</span></li>
+            <li><span class="text-mute font-mono text-[10px]">Processing: Client-side</span></li>
           </ul>
         </div>
         <div>
-          <h4 class="text-xs font-mono uppercase font-semibold text-primary mb-4 tracking-wider">Internal Links</h4>
-          <p class="text-xs text-body leading-relaxed mb-3">
-            Looking for SEO guides? Read our popular article <a href="/blog/how-to-automate-100-pages-of-assignments" class="text-link hover:underline">How to make 100 assignment pages automatically</a>.
-          </p>
-          <div class="flex space-x-2 text-xs font-mono">
-            <a href="/sitemap.xml" class="text-mute hover:text-primary">sitemap.xml</a>
-            <span>•</span>
-            <a href="/robots.txt" class="text-mute hover:text-primary">robots.txt</a>
-          </div>
+          <h4 class="text-xs font-mono uppercase font-semibold text-primary mb-4 tracking-wider">Legal & Map</h4>
+          <ul class="space-y-2 text-xs font-medium text-body">
+            <li><a href="/privacy-policy" class="hover:text-primary transition-colors">Privacy Policy</a></li>
+            <li><a href="/terms-and-conditions" class="hover:text-primary transition-colors">Terms & Conditions</a></li>
+            <li>
+              <div class="flex space-x-2 font-mono text-[10px] mt-2 pt-2 border-t border-hairline">
+                <a href="/sitemap.xml" class="text-mute hover:text-primary">sitemap.xml</a>
+                <span>•</span>
+                <a href="/robots.txt" class="text-mute hover:text-primary">robots.txt</a>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
     </footer>

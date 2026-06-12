@@ -4,6 +4,8 @@ import {
   Settings, Type, FileText, Sparkles, Sliders, Keyboard, 
   Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2 
 } from 'lucide-react';
+import katex from 'katex';
+import * as htmlToImage from 'html-to-image';
 import { FONTS, CATEGORIES, getFontsByCategory } from '../../lib/fonts';
 import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
 
@@ -112,11 +114,200 @@ You can customize:
 
 Write assignments, cursive letters, signature cards or notebook worksheets seamlessly!`;
 
-export default function ConverterApp() {
+interface CanvasElement {
+  id: string;
+  type: 'image' | 'formula' | 'table' | 'sketch';
+  pageIndex: number;
+  x: number; // percentage-based X coordinate
+  y: number; // percentage-based Y coordinate
+  width: number; // percentage-based width
+  height: number; // percentage-based height
+  dataUrl?: string; // image source URL
+  strokes?: Array<{ x: number; y: number; type: 'start' | 'move' }>; // vector sketch paths
+}
+
+const drawTableToDataUrl = (
+  rows: string[][],
+  fontFamily: string,
+  inkColor: string
+): Promise<string> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      resolve('');
+      return;
+    }
+
+    const cellWidth = 120;
+    const cellHeight = 40;
+    const padding = 10;
+    const totalWidth = cellWidth * rows[0].length + padding * 2;
+    const totalHeight = cellHeight * rows.length + padding * 2;
+    
+    canvas.width = totalWidth * 2;
+    canvas.height = totalHeight * 2;
+    ctx.scale(2, 2);
+    ctx.clearRect(0, 0, totalWidth, totalHeight);
+
+    ctx.strokeStyle = inkColor;
+    ctx.lineWidth = 1.5;
+    ctx.fillStyle = inkColor;
+    
+    const drawWobblyLine = (x1: number, y1: number, x2: number, y2: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const segments = Math.max(5, Math.floor(length / 10));
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const px = x1 + dx * t;
+        const py = y1 + dy * t;
+        const wobble = (Math.random() - 0.5) * 1.2;
+        if (dx === 0) {
+          ctx.lineTo(px + wobble, py);
+        } else {
+          ctx.lineTo(px, py + wobble);
+        }
+      }
+      ctx.stroke();
+    };
+
+    for (let r = 0; r <= rows.length; r++) {
+      const y = padding + r * cellHeight;
+      drawWobblyLine(padding, y, totalWidth - padding, y);
+    }
+    for (let c = 0; c <= rows[0].length; c++) {
+      const x = padding + c * cellWidth;
+      drawWobblyLine(x, padding, x, totalHeight - padding);
+    }
+
+    ctx.font = `14px "${fontFamily}", "Architects Daughter", sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+
+    for (let r = 0; r < rows.length; r++) {
+      for (let c = 0; c < rows[r].length; c++) {
+        const text = rows[r][c] || '';
+        const tx = padding + c * cellWidth + 10;
+        const ty = padding + r * cellHeight + cellHeight / 2;
+        ctx.fillText(text, tx, ty);
+      }
+    }
+
+    resolve(canvas.toDataURL());
+  });
+};
+
+const drawFormulaToDataUrl = async (
+  latex: string,
+  inkColor: string
+): Promise<string> => {
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.padding = '15px';
+  container.style.background = 'transparent';
+  container.style.color = inkColor;
+  container.style.fontSize = '24px';
+  container.style.display = 'inline-block';
+  document.body.appendChild(container);
+
+  try {
+    katex.render(latex, container, {
+      throwOnError: false,
+      displayMode: true
+    });
+    
+    await document.fonts.ready;
+    
+    const dataUrl = await htmlToImage.toPng(container, {
+      backgroundColor: 'transparent',
+      style: {
+        transform: 'scale(1)',
+        color: inkColor
+      }
+    });
+
+    document.body.removeChild(container);
+    return dataUrl;
+  } catch (err) {
+    console.error('KaTeX rendering error', err);
+    if (container.parentNode) document.body.removeChild(container);
+    return '';
+  }
+};
+
+const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[]> => {
+  return Promise.all(
+    elements.map(async (el) => {
+      if (el.type === 'sketch') {
+        return {
+          id: el.id,
+          type: el.type,
+          pageIndex: el.pageIndex,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height,
+          strokes: el.strokes
+        };
+      }
+      
+      if (!el.dataUrl) {
+        return {
+          id: el.id,
+          type: el.type,
+          pageIndex: el.pageIndex,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height
+        };
+      }
+
+      try {
+        const img = new Image();
+        img.src = el.dataUrl;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        const bitmap = await createImageBitmap(img);
+        return {
+          id: el.id,
+          type: el.type,
+          pageIndex: el.pageIndex,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height,
+          bitmap
+        };
+      } catch (err) {
+        console.error('Failed to create ImageBitmap for element', el.id, err);
+        return {
+          id: el.id,
+          type: el.type,
+          pageIndex: el.pageIndex,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height
+        };
+      }
+    })
+  );
+};
+
+export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFont?: string; defaultPaper?: string }) {
   // Config state
   const [text, setText] = useState(SAMPLE_TEXT);
-  const [fontFamily, setFontFamily] = useState('Architects Daughter');
-  const [paperStyle, setPaperStyle] = useState('single-ruled');
+  const [fontFamily, setFontFamily] = useState(defaultFont || 'Architects Daughter');
+  const [paperStyle, setPaperStyle] = useState(defaultPaper || 'single-ruled');
   const [gridSize, setGridSize] = useState(30);
   const [inkColor, setInkColor] = useState('#0000ff');
   const [inkType, setInkType] = useState('ballpoint');
@@ -150,9 +341,29 @@ export default function ConverterApp() {
 
   // Layout toggles
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activePanel, setActivePanel] = useState<'fonts' | 'paper' | 'realism' | 'header'>('fonts');
+  const [activePanel, setActivePanel] = useState<'fonts' | 'paper' | 'realism' | 'header' | 'insert'>('fonts');
   const [presets, setPresets] = useState<Record<string, Preset>>(DEFAULT_PRESETS);
   const [newPresetName, setNewPresetName] = useState('');
+
+  // Canvas elements state
+  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  
+  // Sketching mode state
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [currentSketchStrokes, setCurrentSketchStrokes] = useState<Array<{ x: number; y: number; type: 'start' | 'move' }>>([]);
+  
+  // Formula dialog/input state
+  const [latexInput, setLatexInput] = useState('\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}');
+  
+  // Table input state
+  const [tableRowsInput, setTableRowsInput] = useState(3);
+  const [tableColsInput, setTableColsInput] = useState(3);
+  const [tableCells, setTableCells] = useState<string[][]>([
+    ['Header 1', 'Header 2', 'Header 3'],
+    ['Value A', 'Value B', 'Value C'],
+    ['Value D', 'Value E', 'Value F']
+  ]);
 
   // History state for undo/redo
   const [history, setHistory] = useState<string[]>([SAMPLE_TEXT]);
@@ -164,6 +375,55 @@ export default function ConverterApp() {
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState('');
   const [previewPageIdx, setPreviewPageIdx] = useState(0);
+
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
+  const [scale, setScale] = useState(1);
+
+  const [customFonts, setCustomFonts] = useState<Array<{ name: string; family: string; buffer: ArrayBuffer }>>([]);
+
+  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const buffer = event.target?.result as ArrayBuffer;
+        const fontName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9\s-]/g, "");
+        
+        // Register the font in the browser main thread
+        const fontFace = new FontFace(fontName, buffer);
+        const loadedFace = await fontFace.load();
+        document.fonts.add(loadedFace);
+
+        const newCustomFont = {
+          name: fontName,
+          family: fontName,
+          buffer
+        };
+
+        setCustomFonts(prev => [...prev, newCustomFont]);
+        setFontFamily(fontName);
+        showToast(`Custom font loaded: ${fontName}`);
+      } catch (err) {
+        console.error('Failed to load custom font', err);
+        showToast('Invalid font file', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Preload selected fonts programmatically to ensure instant render
+  useEffect(() => {
+    if (fontFamily) {
+      document.fonts.load(`1em "${fontFamily}"`).then(() => {
+        triggerRender();
+      });
+    }
+  }, [fontFamily]);
 
   const workerRef = useRef<Worker | null>(null);
   const renderTimeoutRef = useRef<number | null>(null);
@@ -230,8 +490,10 @@ export default function ConverterApp() {
 
     setRendering(true);
 
-    renderTimeoutRef.current = window.setTimeout(() => {
-      const font = FONTS.find(f => f.family === fontFamily) || FONTS[0];
+    renderTimeoutRef.current = window.setTimeout(async () => {
+      const font = FONTS.find(f => f.family === fontFamily);
+      const fontName = fontFamily;
+      const fontUrl = font ? font.path : '';
       
       let paperWidth = 800;
       let paperHeight = 1130;
@@ -241,10 +503,14 @@ export default function ConverterApp() {
         paperHeight = 1318;
       }
 
+      // Prepare overlay elements for worker
+      const workerElements = await prepareElementsForWorker(canvasElements);
+
       const payload = {
         text,
-        fontName: font.family,
-        fontUrl: font.path,
+        fontName,
+        fontUrl,
+        customFonts: customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer })),
         paperStyle,
         gridSize,
         inkColor,
@@ -270,18 +536,21 @@ export default function ConverterApp() {
         backgroundImageBitmap: customBgBitmap,
         dpiMultiplier: 1.0, // Render on screen at 1x
         paperWidth,
-        paperHeight
+        paperHeight,
+        elements: workerElements,
+        isBold,
+        isItalic,
+        isUnderline
       };
 
-      // Transfer ImageBitmap if available to avoid cloning overhead
-      if (customBgBitmap) {
-        // Create a copy bitmap if we want to transfer, or just pass it by clone.
-        // Chrome allows cloning ImageBitmap in worker. Transferring is faster but invalidates local state.
-        // Let's pass it by cloning by default to keep local reference intact.
-        workerRef.current?.postMessage(payload);
-      } else {
-        workerRef.current?.postMessage(payload);
-      }
+      const transferList: Transferable[] = [];
+      workerElements.forEach(el => {
+        if (el.bitmap) {
+          transferList.push(el.bitmap);
+        }
+      });
+
+      workerRef.current?.postMessage(payload, transferList);
     }, 250);
   };
 
@@ -292,7 +561,7 @@ export default function ConverterApp() {
     text, fontFamily, paperStyle, gridSize, inkColor, inkType, fontSize, lineHeight,
     wordSpacing, letterSpacing, alignment, margins, messiness, rotation, vJitter,
     hJitter, baselineDrift, pressureVariation, smudge, seed, pageHeader, pageFooter,
-    customBgBitmap, exportPaper
+    customBgBitmap, exportPaper, canvasElements, isBold, isItalic, isUnderline, customFonts
   ]);
 
   // Handle text undo/redo history
@@ -413,6 +682,8 @@ export default function ConverterApp() {
     localStorage.setItem('scribble_presets', JSON.stringify(nextPresets));
   };
 
+  const [customBgUrl, setCustomBgUrl] = useState<string>('');
+
   // Custom paper file upload
   const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -421,6 +692,8 @@ export default function ConverterApp() {
     try {
       const bitmap = await createImageBitmap(file);
       setCustomBgBitmap(bitmap);
+      if (customBgUrl) URL.revokeObjectURL(customBgUrl);
+      setCustomBgUrl(URL.createObjectURL(file));
       setCustomBgName(file.name);
       setPaperStyle('custom');
       showToast(`Uploaded background: ${file.name}`);
@@ -440,9 +713,11 @@ export default function ConverterApp() {
 
   // Run render specifically at high DPI to export
   const renderHighDpi = async (dpi: number): Promise<ArrayBuffer[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const exportWorker = new Worker('/workers/render.worker.js');
-      const font = FONTS.find(f => f.family === fontFamily) || FONTS[0];
+      const font = FONTS.find(f => f.family === fontFamily);
+      const fontName = fontFamily;
+      const fontUrl = font ? font.path : '';
       
       let paperWidth = 800;
       let paperHeight = 1130;
@@ -451,6 +726,9 @@ export default function ConverterApp() {
       } else if (exportPaper === 'legal') {
         paperHeight = 1318;
       }
+
+      // Prepare overlay elements for worker
+      const workerElements = await prepareElementsForWorker(canvasElements);
 
       exportWorker.onmessage = (e) => {
         const { type, pages: buffers, message } = e.data;
@@ -462,10 +740,18 @@ export default function ConverterApp() {
         }
       };
 
+      const transferList: Transferable[] = [];
+      workerElements.forEach(el => {
+        if (el.bitmap) {
+          transferList.push(el.bitmap);
+        }
+      });
+
       exportWorker.postMessage({
         text,
-        fontName: font.family,
-        fontUrl: font.path,
+        fontName,
+        fontUrl,
+        customFonts: customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer })),
         paperStyle,
         gridSize,
         inkColor,
@@ -491,8 +777,12 @@ export default function ConverterApp() {
         backgroundImageBitmap: customBgBitmap,
         dpiMultiplier: dpi,
         paperWidth,
-        paperHeight
-      });
+        paperHeight,
+        elements: workerElements,
+        isBold,
+        isItalic,
+        isUnderline
+      }, transferList);
     });
   };
 
@@ -526,8 +816,265 @@ export default function ConverterApp() {
     }
   };
 
+  const handleDragStart = (e: React.MouseEvent, el: CanvasElement) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedElementId(el.id);
+    
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startElX = el.x;
+    const startElY = el.y;
+
+    const container = document.getElementById('preview-container');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = ((moveEvent.clientX - startMouseX) / containerWidth) * 100;
+      const deltaY = ((moveEvent.clientY - startMouseY) / containerHeight) * 100;
+
+      const newX = Math.max(0, Math.min(100 - el.width, startElX + deltaX));
+      const newY = Math.max(0, Math.min(100 - el.height, startElY + deltaY));
+
+      setCanvasElements(prev => prev.map(item => item.id === el.id ? { ...item, x: newX, y: newY } : item));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleResizeStart = (e: React.MouseEvent, el: CanvasElement) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedElementId(el.id);
+
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startElWidth = el.width;
+    const startElHeight = el.height;
+
+    const container = document.getElementById('preview-container');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaWidth = ((moveEvent.clientX - startMouseX) / containerWidth) * 100;
+      const deltaHeight = ((moveEvent.clientY - startMouseY) / containerHeight) * 100;
+
+      const newWidth = Math.max(5, Math.min(100 - el.x, startElWidth + deltaWidth));
+      const newHeight = Math.max(5, Math.min(100 - el.y, startElHeight + deltaHeight));
+
+      setCanvasElements(prev => prev.map(item => item.id === el.id ? { ...item, width: newWidth, height: newHeight } : item));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const getCoordinatesFromEvent = (clientX: number, clientY: number) => {
+    const container = document.getElementById('preview-container');
+    if (!container) return { x: 0, y: 0 };
+    const rect = container.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    };
+  };
+
+  const handleSketchStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const coords = getCoordinatesFromEvent(e.clientX, e.clientY);
+    setCurrentSketchStrokes([{ x: coords.x, y: coords.y, type: 'start' }]);
+  };
+
+  const handleSketchMove = (e: React.MouseEvent) => {
+    if (currentSketchStrokes.length === 0) return;
+    const coords = getCoordinatesFromEvent(e.clientX, e.clientY);
+    setCurrentSketchStrokes(prev => [...prev, { x: coords.x, y: coords.y, type: 'move' }]);
+  };
+
+  const handleSketchEnd = () => {
+    if (currentSketchStrokes.length === 0) return;
+    
+    const newElement: CanvasElement = {
+      id: String(Date.now()),
+      type: 'sketch',
+      pageIndex: previewPageIdx,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      strokes: currentSketchStrokes
+    };
+    
+    setCanvasElements(prev => [...prev, newElement]);
+    setCurrentSketchStrokes([]);
+  };
+
+  const handleSketchTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const coords = getCoordinatesFromEvent(touch.clientX, touch.clientY);
+    setCurrentSketchStrokes([{ x: coords.x, y: coords.y, type: 'start' }]);
+  };
+
+  const handleSketchTouchMove = (e: React.TouchEvent) => {
+    if (currentSketchStrokes.length === 0) return;
+    const touch = e.touches[0];
+    const coords = getCoordinatesFromEvent(touch.clientX, touch.clientY);
+    setCurrentSketchStrokes(prev => [...prev, { x: coords.x, y: coords.y, type: 'move' }]);
+  };
+
+  const handleSketchTouchEnd = () => {
+    handleSketchEnd();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const newElement: CanvasElement = {
+        id: String(Date.now()),
+        type: 'image',
+        pageIndex: previewPageIdx,
+        x: 20,
+        y: 20,
+        width: 30,
+        height: 20,
+        dataUrl
+      };
+      setCanvasElements([...canvasElements, newElement]);
+      showToast('Image inserted!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Measure preview container scale relative to 800px design width
+  useEffect(() => {
+    const container = document.getElementById('preview-container');
+    if (!container) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setScale(entry.contentRect.width / 800);
+      }
+    });
+    observer.observe(container);
+    
+    // Initial measurement
+    setScale(container.getBoundingClientRect().width / 800);
+    
+    return () => observer.disconnect();
+  }, [editMode, paperStyle]);
+
+  const getPaperBackgroundStyle = (): React.CSSProperties => {
+    if (paperStyle === 'plain') {
+      return { backgroundColor: '#ffffff' };
+    }
+    
+    const scaledGridSize = gridSize * scale;
+    const scaledLeftMargin = margins.left * scale;
+    const scaledTopMargin = margins.top * scale;
+    
+    if (paperStyle === 'single-ruled' || paperStyle === 'a4-notebook') {
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: `
+          linear-gradient(to right, transparent ${scaledLeftMargin - 1}px, #ff8a8a ${scaledLeftMargin - 1}px, #ff8a8a ${scaledLeftMargin + 1}px, transparent ${scaledLeftMargin + 1}px),
+          repeating-linear-gradient(transparent, transparent ${scaledGridSize - 1}px, #e5e7eb ${scaledGridSize - 1}px, #e5e7eb ${scaledGridSize}px)
+        `,
+        backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
+        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+      };
+    }
+    
+    if (paperStyle === 'legal') {
+      return {
+        backgroundColor: '#fdfbbe',
+        backgroundImage: `
+          linear-gradient(to right, transparent ${scaledLeftMargin - 3}px, #ff8a8a ${scaledLeftMargin - 3}px, #ff8a8a ${scaledLeftMargin - 1}px, transparent ${scaledLeftMargin - 1}px, transparent ${scaledLeftMargin + 1}px, #ff8a8a ${scaledLeftMargin + 1}px, #ff8a8a ${scaledLeftMargin + 3}px, transparent ${scaledLeftMargin + 3}px),
+          repeating-linear-gradient(transparent, transparent ${scaledGridSize - 1}px, #cbd5e1 ${scaledGridSize - 1}px, #cbd5e1 ${scaledGridSize}px)
+        `,
+        backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
+        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+      };
+    }
+    
+    if (paperStyle === 'double-ruled') {
+      const innerStep = scaledGridSize * 0.35;
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: `
+          linear-gradient(to right, transparent ${scaledLeftMargin - 1}px, #ff8a8a ${scaledLeftMargin - 1}px, #ff8a8a ${scaledLeftMargin + 1}px, transparent ${scaledLeftMargin + 1}px),
+          repeating-linear-gradient(
+            transparent, 
+            transparent 0px, 
+            #b8cce8 0px, #b8cce8 1px, 
+            transparent 1px, transparent ${innerStep}px, 
+            #aaaaaa ${innerStep}px, #aaaaaa ${innerStep + 1}px, 
+            transparent ${innerStep + 1}px, transparent ${innerStep * 2}px, 
+            #b8cce8 ${innerStep * 2}px, #b8cce8 ${innerStep * 2 + 1}px, 
+            transparent ${innerStep * 2 + 1}px, transparent ${scaledGridSize}px
+          )
+        `,
+        backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
+        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+      };
+    }
+    
+    if (paperStyle === 'graph') {
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: `
+          repeating-linear-gradient(transparent, transparent ${scaledGridSize - 1}px, #e2e8f0 ${scaledGridSize - 1}px, #e2e8f0 ${scaledGridSize}px),
+          repeating-linear-gradient(to right, transparent, transparent ${scaledGridSize - 1}px, #e2e8f0 ${scaledGridSize - 1}px, #e2e8f0 ${scaledGridSize}px)
+        `,
+        backgroundSize: `${scaledGridSize}px ${scaledGridSize}px`
+      };
+    }
+    
+    if (paperStyle === 'dot-grid') {
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: `radial-gradient(#94a3b8 1px, transparent 1px)`,
+        backgroundSize: `${scaledGridSize}px ${scaledGridSize}px`
+      };
+    }
+
+    if (paperStyle === 'custom' && customBgUrl) {
+      return {
+        backgroundImage: `url(${customBgUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: '#ffffff'
+      };
+    }
+    
+    return { backgroundColor: '#ffffff' };
+  };
+
   return (
-    <div className="w-full flex flex-col gap-6 relative min-h-[calc(100vh-100px)]">
+    <div className="w-full flex flex-col gap-4 relative min-h-[calc(100vh-100px)]">
       
       {/* Toast Notification */}
       {toast && (
@@ -541,668 +1088,962 @@ export default function ConverterApp() {
         </div>
       )}
 
-      {/* Top Section: Live Preview (Left) and Text Editor (Right) */}
-      <div className="flex flex-col md:flex-row gap-6 w-full items-stretch">
-        
-        {/* Left Column: Live Canvas Preview (50%) */}
-        <div className="w-full md:w-1/2 flex items-center justify-center min-h-[450px]">
-          {rendering && pages.length === 0 ? (
-            <div className="w-full max-w-[400px] aspect-[1/1.41] bg-white flex flex-col items-center justify-center space-y-3 rounded shadow animate-pulse">
-              <RefreshCw size={24} className="animate-spin text-mute" />
-              <span className="text-xs text-mute font-mono">GENERATING HANDWRITING...</span>
-            </div>
-          ) : error ? (
-            <div className="w-full max-w-[400px] aspect-[1/1.41] bg-white flex flex-col items-center justify-center p-6 text-center text-xs text-red-500 font-mono rounded shadow border border-red-200">
-              <Info size={24} className="mb-2" />
-              <span>{error}</span>
-            </div>
-          ) : pages.length > 0 ? (
-            <div className="relative">
-              <img
-                src={pages[previewPageIdx]}
-                alt={`Handwritten page ${previewPageIdx + 1}`}
-                className="w-full max-w-[400px] shadow rounded object-contain bg-white"
-              />
-              {pages.length > 1 && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center space-x-2 text-xs bg-canvas/80 backdrop-blur-sm px-3 py-1 rounded-full border border-hairline">
-                  <button
-                    disabled={previewPageIdx === 0}
-                    onClick={() => setPreviewPageIdx(p => Math.max(0, p - 1))}
-                    className="font-mono font-semibold disabled:opacity-40 cursor-pointer"
-                  >
-                    ◀
-                  </button>
-                  <span className="font-mono text-body font-medium">
-                    {previewPageIdx + 1}/{pages.length}
-                  </span>
-                  <button
-                    disabled={previewPageIdx >= pages.length - 1}
-                    onClick={() => setPreviewPageIdx(p => Math.min(pages.length - 1, p + 1))}
-                    className="font-mono font-semibold disabled:opacity-40 cursor-pointer"
-                  >
-                    ▶
-                  </button>
-                </div>
+      {/* Modern Formatting Toolbar */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-4 p-3 bg-canvas border border-hairline rounded-lg shadow-sm font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-4">
+          
+          {/* Select Handwriting Font */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Handwriting Style</span>
+            <select
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
+              className="input-field h-8 bg-canvas text-xs font-mono py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer"
+            >
+              <optgroup label="Standard Fonts">
+                {FONTS.map(font => (
+                  <option key={font.name} value={font.family}>
+                    {font.family} ({font.category})
+                  </option>
+                ))}
+              </optgroup>
+              {customFonts.length > 0 && (
+                <optgroup label="Custom Fonts">
+                  {customFonts.map(cf => (
+                    <option key={cf.name} value={cf.family}>
+                      {cf.family} (custom)
+                    </option>
+                  ))}
+                </optgroup>
               )}
-            </div>
-          ) : (
-            <div className="w-full max-w-[400px] aspect-[1/1.41] bg-white flex items-center justify-center rounded shadow">
-              <span className="text-xs text-mute font-mono">No pages rendered</span>
-            </div>
-          )}
-        </div>
+            </select>
+          </div>
 
-        {/* Right Column: Text Editor Input (50%) */}
-        <div className="w-full md:w-1/2 flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm min-h-[450px] transition-colors">
-          <div className="flex items-center justify-between w-full mb-3 border-b border-hairline pb-2.5">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body">Text Editor Input</span>
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={handleUndo} 
-                disabled={historyIndex === 0}
-                className="p-1 rounded hover:bg-canvas-soft-2 text-body disabled:opacity-30 cursor-pointer"
-                title="Undo (Ctrl+Z)"
+          {/* Text Formatting Toolbar */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Format</span>
+            <div className="flex items-center border border-hairline rounded-md h-8 bg-canvas overflow-hidden">
+              <button
+                onClick={() => setIsBold(!isBold)}
+                className={`px-3 h-full font-bold border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Bold Handwriting"
               >
-                <Undo2 size={15} />
+                B
               </button>
-              <button 
-                onClick={handleRedo} 
-                disabled={historyIndex >= history.length - 1}
-                className="p-1 rounded hover:bg-canvas-soft-2 text-body disabled:opacity-30 cursor-pointer"
-                title="Redo (Ctrl+Y)"
+              <button
+                onClick={() => setIsItalic(!isItalic)}
+                className={`px-3 h-full italic border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Italic (Slant)"
               >
-                <Redo2 size={15} />
+                I
               </button>
-              <span className="text-hairline h-4 w-px bg-current mx-2"></span>
-              <button 
-                onClick={() => handleTextChange(text + '\n---page break---\n')}
-                className="text-[10px] font-mono font-semibold text-body hover:text-primary bg-canvas-soft-2 hover:bg-hairline px-2 py-0.5 rounded cursor-pointer transition-colors"
+              <button
+                onClick={() => setIsUnderline(!isUnderline)}
+                className={`px-3 h-full underline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Underline"
               >
-                + PAGE_BREAK
+                U
               </button>
             </div>
           </div>
 
-          <textarea
-            value={text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            placeholder="Type your notes here. Delimit pages using '---page break---'."
-            className="flex-grow w-full border border-hairline bg-canvas text-ink p-4 rounded font-mono text-sm leading-relaxed outline-none focus:border-hairline-strong resize-y min-h-[300px] transition-colors"
-          />
-
-          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs font-mono border-b border-hairline pb-3">
-            <span className="text-mute mr-1">Try Languages:</span>
-            <button
-              onClick={() => {
-                handleTextChange("नमस्ते Text to Handwriting! यह देवनागरी लिखावट का एक सुंदर उदाहरण है।");
-                setFontFamily("Yatra One");
-              }}
-              className="px-2 py-0.5 rounded bg-canvas-soft-2 hover:bg-hairline text-[10px] font-semibold text-body hover:text-primary transition-colors cursor-pointer"
+          {/* Ruled Paper Style */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Paper Lines</span>
+            <select
+              value={paperStyle}
+              onChange={(e) => setPaperStyle(e.target.value)}
+              className="input-field h-8 bg-canvas text-xs py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer"
             >
-              Hindi (हिन्दी)
-            </button>
-            <button
-              onClick={() => {
-                handleTextChange("The quick brown fox jumps over the lazy dog. Realistic handwritten notes made easy.");
-                setFontFamily("Architects Daughter");
-              }}
-              className="px-2 py-0.5 rounded bg-canvas-soft-2 hover:bg-hairline text-[10px] font-semibold text-body hover:text-primary transition-colors cursor-pointer"
-            >
-              English
-            </button>
-            <button
-              onClick={() => {
-                handleTextChange("Hola Text to Handwriting! Este es un ejemplo de texto escrito a mano en español.");
-                setFontFamily("Dancing Script");
-              }}
-              className="px-2 py-0.5 rounded bg-canvas-soft-2 hover:bg-hairline text-[10px] font-semibold text-body hover:text-primary transition-colors cursor-pointer"
-            >
-              Spanish (Español)
-            </button>
-            <button
-              onClick={() => {
-                handleTextChange("Bonjour Text to Handwriting! Voici un exemple d'écriture manuscrite en français.");
-                setFontFamily("Caveat");
-              }}
-              className="px-2 py-0.5 rounded bg-canvas-soft-2 hover:bg-hairline text-[10px] font-semibold text-body hover:text-primary transition-colors cursor-pointer"
-            >
-              French (Français)
-            </button>
-            <button
-              onClick={() => {
-                handleTextChange("Hallo Text to Handwriting! Dies ist ein Beispiel für eine deutsche Handschrift.");
-                setFontFamily("Patrick Hand");
-              }}
-              className="px-2 py-0.5 rounded bg-canvas-soft-2 hover:bg-hairline text-[10px] font-semibold text-body hover:text-primary transition-colors cursor-pointer"
-            >
-              German (Deutsch)
-            </button>
+              <option value="plain">Plain White</option>
+              <option value="single-ruled">Single Ruled</option>
+              <option value="double-ruled">Double Ruled</option>
+              <option value="a4-notebook">A4 Notebook</option>
+              <option value="legal">Yellow Legal Pad</option>
+              <option value="graph">Graph Grid</option>
+              <option value="dot-grid">Dot Grid</option>
+              <option value="custom">Custom Background</option>
+            </select>
           </div>
 
-          <div className="flex items-center space-x-2 text-[10px] text-mute font-mono mt-3">
-            <Keyboard size={11} />
-            <div className="flex space-x-3">
-              <span><kbd className="border border-hairline px-1 rounded bg-canvas font-sans">Ctrl+Enter</kbd> Render</span>
-              <span><kbd className="border border-hairline px-1 rounded bg-canvas font-sans">Ctrl+Z/Y</kbd> History</span>
-              <span><kbd className="border border-hairline px-1 rounded bg-canvas font-sans">Ctrl+S</kbd> Export PDF</span>
+          {/* Ink Color */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Ink Color</span>
+            <div className="flex items-center gap-1.5 h-8 px-2 border border-hairline rounded-md bg-canvas">
+              {['#0000ff', '#1c1917', '#dc2626'].map(color => (
+                <button
+                  key={color}
+                  onClick={() => setInkColor(color)}
+                  className="w-4 h-4 rounded-full border border-hairline cursor-pointer relative flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: color }}
+                  title={color === '#0000ff' ? 'Blue Ink' : color === '#1c1917' ? 'Black Ink' : 'Red Ink'}
+                >
+                  {inkColor === color && (
+                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  )}
+                </button>
+              ))}
+              <input
+                type="color"
+                value={inkColor}
+                onChange={(e) => setInkColor(e.target.value)}
+                className="w-5 h-5 rounded cursor-pointer border border-hairline p-0 bg-transparent shrink-0"
+                title="Custom Ink Color"
+              />
+            </div>
+          </div>
+
+          {/* Font Size */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Size ({fontSize}px)</span>
+            <div className="flex items-center gap-2 h-8">
+              <input
+                type="range"
+                min="14"
+                max="40"
+                value={fontSize}
+                onChange={(e) => setFontSize(parseInt(e.target.value))}
+                className="w-20 md:w-28 accent-primary bg-hairline h-1 rounded-lg cursor-pointer mt-1"
+              />
             </div>
           </div>
         </div>
 
+        {/* View Mode Tabs */}
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-mute font-bold uppercase mb-1">View Mode</span>
+          <div className="flex items-center bg-canvas-soft-2 p-0.5 rounded-md border border-hairline h-8 text-[11px]">
+            <button
+              onClick={() => setEditMode('edit')}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+            >
+              Edit Paper
+            </button>
+            <button
+              onClick={() => {
+                setEditMode('preview');
+                triggerRender();
+              }}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+            >
+              Realism Preview
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Bottom Section: Customization & Realism Controls */}
-      <div className="w-full border border-hairline bg-canvas rounded-lg p-6 shadow-sm transition-colors">
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-hairline pb-4 mb-4 gap-4">
-          <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-primary flex items-center">
-            <Settings size={14} className="mr-1.5" />
-            <span>Handwriting Configuration Settings</span>
-          </h3>
+      {/* Main Workspace Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch w-full">
+        
+        {/* Left Column: Interactive A4 Paper (65%) */}
+        <div className="w-full lg:w-[65%] flex flex-col items-center justify-start py-4 bg-canvas-soft border border-hairline rounded-lg shadow-sm min-h-[500px]">
+          
+          {/* A4 Bounding Sheet Container */}
+          <div 
+            id="preview-container" 
+            className="relative w-full max-w-[480px] aspect-[800/1130] bg-white rounded border border-hairline shadow-md overflow-hidden select-none"
+          >
+            {editMode === 'edit' ? (
+              /* Inline Editable Textarea styled exactly like ruled notebook paper */
+              <textarea
+                value={text}
+                onChange={(e) => handleTextChange(e.target.value)}
+                placeholder="Type or paste your text directly on the page. All edits are saved instantly..."
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  paddingTop: `${margins.top * scale}px`,
+                  paddingBottom: `${margins.bottom * scale}px`,
+                  paddingLeft: `${(margins.left + 6) * scale}px`,
+                  paddingRight: `${margins.right * scale}px`,
+                  fontSize: `${fontSize * scale}px`,
+                  lineHeight: paperStyle === 'plain'
+                    ? `${fontSize * lineHeight * scale}px`
+                    : `${gridSize * scale}px`,
+                  color: inkColor,
+                  fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                  textAlign: alignment as any,
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'none',
+                  letterSpacing: `${letterSpacing * scale}px`,
+                  wordSpacing: `${wordSpacing * scale}px`,
+                  fontWeight: isBold ? 'bold' : 'normal',
+                  fontStyle: isItalic ? 'italic' : 'normal',
+                  textDecoration: isUnderline ? 'underline' : 'none',
+                  backgroundAttachment: 'local',
+                  overflowY: 'auto',
+                  ...getPaperBackgroundStyle()
+                }}
+                className="select-text focus:outline-none placeholder:text-gray-300 transition-colors"
+              />
+            ) : (
+              /* Realistic handwriting preview from worker */
+              <div className="relative w-full h-full">
+                {rendering && pages.length === 0 ? (
+                  <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center space-y-3">
+                    <RefreshCw size={24} className="animate-spin text-mute" />
+                    <span className="text-[10px] text-mute font-mono tracking-widest uppercase">RENDERING REALISM ENGINE...</span>
+                  </div>
+                ) : error ? (
+                  <div className="absolute inset-0 bg-white flex flex-col items-center justify-center p-6 text-center text-xs text-red-500 font-mono">
+                    <Info size={20} className="mb-2" />
+                    <span>{error}</span>
+                  </div>
+                ) : pages.length > 0 ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={pages[previewPageIdx]}
+                      alt={`Handwritten page ${previewPageIdx + 1}`}
+                      className="w-full h-full object-contain"
+                      draggable={false}
+                    />
+                    
+                    {/* Elements Overlay Layer (draggable/resizable on top of the preview) */}
+                    <div className="absolute inset-0 top-0 left-0 w-full h-full pointer-events-auto">
+                      {canvasElements
+                        .filter(el => el.pageIndex === previewPageIdx)
+                        .map(el => (
+                          <div
+                            key={el.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedElementId(el.id);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              left: `${el.x}%`,
+                              top: `${el.y}%`,
+                              width: `${el.width}%`,
+                              height: `${el.height}%`,
+                              border: selectedElementId === el.id ? '1.5px dashed #0070f3' : '1px dashed transparent'
+                            }}
+                            className="group hover:border-hairline-strong pointer-events-auto"
+                          >
+                            {/* Render content */}
+                            {el.type === 'image' && el.dataUrl && (
+                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                            )}
+                            {el.type === 'formula' && el.dataUrl && (
+                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                            )}
+                            {el.type === 'table' && el.dataUrl && (
+                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                            )}
+                            
+                            {/* Drag Handle (top/center bar) */}
+                            <div
+                              className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors"
+                              onMouseDown={(e) => handleDragStart(e, el)}
+                              title="Drag Element"
+                            />
 
-          {/* Sub-panel Navigation tabs */}
-          <div className="flex flex-wrap gap-1 bg-canvas-soft-2 p-1 rounded-md text-xs font-mono">
+                            {/* Resize Handle (bottom right corner) */}
+                            <div
+                              className="absolute right-0 bottom-0 w-3 h-3 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              onMouseDown={(e) => handleResizeStart(e, el)}
+                              title="Resize Element"
+                            />
+
+                            {/* Delete Handle (top right corner) */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCanvasElements(canvasElements.filter(item => item.id !== el.id));
+                                setSelectedElementId(null);
+                              }}
+                              className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
+                              title="Delete Element"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))
+                      }
+                      
+                      {/* Drawing Canvas Overlays */}
+                      {isDrawingMode && (
+                        <div
+                          className="absolute inset-0 bg-transparent cursor-crosshair pointer-events-auto touch-none"
+                          onMouseDown={handleSketchStart}
+                          onMouseMove={handleSketchMove}
+                          onMouseUp={handleSketchEnd}
+                          onTouchStart={handleSketchTouchStart}
+                          onTouchMove={handleSketchTouchMove}
+                          onTouchEnd={handleSketchTouchEnd}
+                        >
+                          <svg className="w-full h-full pointer-events-none">
+                            {canvasElements
+                              .filter(el => el.pageIndex === previewPageIdx && el.type === 'sketch')
+                              .map(el => {
+                                let pathData = '';
+                                el.strokes?.forEach((pt) => {
+                                  if (pt.type === 'start') {
+                                    pathData += ` M ${pt.x}% ${pt.y}%`;
+                                  } else {
+                                    pathData += ` L ${pt.x}% ${pt.y}%`;
+                                  }
+                                });
+                                return (
+                                  <path
+                                    key={el.id}
+                                    d={pathData}
+                                    fill="none"
+                                    stroke={inkColor}
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    opacity="0.9"
+                                  />
+                                );
+                              })
+                            }
+                            {currentSketchStrokes.length > 0 && (
+                              <path
+                                  d={currentSketchStrokes.reduce((acc, pt) => {
+                                    if (pt.type === 'start') {
+                                      return `${acc} M ${pt.x}% ${pt.y}%`;
+                                    } else {
+                                      return `${acc} L ${pt.x}% ${pt.y}%`;
+                                    }
+                                  }, '')}
+                                  fill="none"
+                                  stroke={inkColor}
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  opacity="0.9"
+                                />
+                              )}
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-mute font-mono text-xs">
+                    <span>Click "Generate Image" to render the realism effects.</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Action Trigger Buttons & Page Indicators */}
+          <div className="flex flex-col items-center gap-3 mt-4 w-full px-8">
+            
+            {/* Generate Image Button */}
+            <div className="flex gap-2 w-full max-w-[480px]">
+              <button
+                onClick={() => {
+                  setEditMode('preview');
+                  triggerRender();
+                  showToast('Realism rendering triggered!');
+                }}
+                className="btn-primary w-full py-2.5 rounded-full font-mono text-xs font-bold uppercase tracking-wider cursor-pointer shadow flex items-center justify-center gap-1.5"
+              >
+                <Sparkles size={13} />
+                <span>Generate Realistic Image</span>
+              </button>
+            </div>
+
+            {/* Pagination Controls */}
+            {pages.length > 1 && (
+              <div className="flex items-center space-x-4 text-xs font-mono bg-canvas border border-hairline px-4 py-1.5 rounded-full shadow-sm mt-1">
+                <button
+                  disabled={previewPageIdx === 0}
+                  onClick={() => setPreviewPageIdx(p => Math.max(0, p - 1))}
+                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary"
+                  title="Previous Page"
+                >
+                  ◀ Prev
+                </button>
+                <span className="text-body font-medium select-none">
+                  Page {previewPageIdx + 1} of {pages.length}
+                </span>
+                <button
+                  disabled={previewPageIdx >= pages.length - 1}
+                  onClick={() => setPreviewPageIdx(p => Math.min(pages.length - 1, p + 1))}
+                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary"
+                  title="Next Page"
+                >
+                  Next ▶
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Advanced Customization Sidebar (35%) */}
+        <div className="w-full lg:w-[35%] flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm min-h-[500px]">
+          
+          {/* Sidebar tabs */}
+          <div className="grid grid-cols-5 gap-1 bg-canvas-soft-2 p-1 rounded-md text-[10px] font-mono mb-4 text-center">
             <button 
               onClick={() => setActivePanel('fonts')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${activePanel === 'fonts' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'fonts' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
-              Typography
-            </button>
-            <button 
-              onClick={() => setActivePanel('paper')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${activePanel === 'paper' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
-            >
-              Paper & Ink
+              Layout
             </button>
             <button 
               onClick={() => setActivePanel('realism')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${activePanel === 'realism' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'realism' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
-              Realism Engine
+              Realism
             </button>
             <button 
               onClick={() => setActivePanel('header')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${activePanel === 'header' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'header' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
-              Margins & Header
+              Headers
+            </button>
+            <button 
+              onClick={() => setActivePanel('insert')}
+              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+            >
+              Insert
+            </button>
+            <button 
+              onClick={() => setActivePanel('paper')}
+              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'paper' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+            >
+              Presets
             </button>
           </div>
-        </div>
 
-        {/* Configurations Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          
-          {/* Column 1 & 2: Active Panel Settings */}
-          <div className="lg:col-span-2 min-h-[220px]">
+          {/* Active Sidebar Panels */}
+          <div className="flex-grow overflow-y-auto space-y-6 text-xs text-body">
             
+            {/* Panel: Layout & Margins */}
             {activePanel === 'fonts' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Layout & Spacing</h3>
+                
+                <div className="grid grid-cols-2 gap-3 font-mono">
                   <div>
-                    <label className="block text-xs font-mono font-semibold uppercase text-body mb-2">Select Font Category</label>
-                    <select
-                      value={FONTS.find(f => f.family === fontFamily)?.category || 'neat'}
-                      onChange={(e) => {
-                        const categoryFonts = getFontsByCategory(e.target.value);
-                        if (categoryFonts.length > 0) {
-                          setFontFamily(categoryFonts[0].family);
-                        }
-                      }}
-                      className="input-field text-xs bg-canvas"
-                    >
-                      {CATEGORIES.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-mono font-semibold uppercase text-body mb-2">Handwriting Font Variant</label>
-                    <select
-                      value={fontFamily}
-                      onChange={(e) => setFontFamily(e.target.value)}
-                      className="input-field text-xs bg-canvas font-mono"
-                    >
-                      {FONTS.map(font => (
-                        <option key={font.name} value={font.family}>
-                          {font.family} ({font.category})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-mono text-body mb-2">Text Alignment</span>
-                    <div className="grid grid-cols-3 gap-1 bg-canvas-soft-2 p-0.5 rounded text-xs font-mono">
-                      {['left', 'center', 'right'].map(align => (
-                        <button
-                          key={align}
-                          onClick={() => setAlignment(align)}
-                          className={`py-1 rounded capitalize cursor-pointer ${alignment === align ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
-                        >
-                          {align}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <span className="block text-[10px] font-mono font-bold uppercase text-mute mb-1">Layout Spacing Controls</span>
-                  <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Font Size</span>
-                      <span>{fontSize}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="14"
-                      max="40"
-                      value={fontSize}
-                      onChange={(e) => setFontSize(parseInt(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Line Height</span>
-                      <span>{lineHeight}x</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1.0"
-                      max="2.5"
-                      step="0.05"
-                      value={lineHeight}
-                      onChange={(e) => setLineHeight(parseFloat(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Word Spacing</span>
-                      <span>{wordSpacing}px</span>
-                    </div>
+                    <span>Word Spacing</span>
                     <input
                       type="range"
                       min="-5"
                       max="15"
                       value={wordSpacing}
                       onChange={(e) => setWordSpacing(parseInt(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Letter Spacing</span>
-                      <span>{letterSpacing}px</span>
-                    </div>
+                    <span>Letter Spacing</span>
                     <input
                       type="range"
                       min="-5"
                       max="10"
                       value={letterSpacing}
                       onChange={(e) => setLetterSpacing(parseInt(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
                     />
                   </div>
                 </div>
-              </div>
-            )}
 
-            {activePanel === 'paper' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-mono font-semibold uppercase text-body mb-2">Paper Background style</label>
-                    <select
-                      value={paperStyle}
-                      onChange={(e) => setPaperStyle(e.target.value)}
-                      className="input-field text-xs bg-canvas"
-                    >
-                      <option value="plain">Plain White Page</option>
-                      <option value="single-ruled">Single Ruled (Notebook)</option>
-                      <option value="double-ruled">Double Ruled (Calligraphy)</option>
-                      <option value="a4-notebook">A4 Ruled with Top Margin</option>
-                      <option value="legal">Legal Pad (Yellow Ruled)</option>
-                      <option value="graph">Graph Grid Paper</option>
-                      <option value="dot-grid">Dot Grid Sheet</option>
-                      <option value="custom">Custom Image Background</option>
-                    </select>
+                <div className="space-y-2 font-mono">
+                  <div className="flex justify-between">
+                    <span>Line Height</span>
+                    <span>{lineHeight}x</span>
                   </div>
+                  <input
+                    type="range"
+                    min="1.0"
+                    max="2.5"
+                    step="0.05"
+                    value={lineHeight}
+                    onChange={(e) => setLineHeight(parseFloat(e.target.value))}
+                    className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
+                  />
+                </div>
 
-                  {paperStyle === 'custom' && (
-                    <div className="border border-dashed border-hairline rounded-lg p-3 bg-canvas-soft-2/50 text-center">
-                      {customBgName ? (
-                        <div className="space-y-2">
-                          <p className="text-xs font-mono text-body truncate">{customBgName}</p>
-                          <button 
-                            onClick={() => { setCustomBgBitmap(null); setCustomBgName(''); setPaperStyle('plain'); }}
-                            className="text-[10px] font-mono text-red-500 hover:underline flex items-center justify-center mx-auto"
-                          >
-                            <Trash2 size={10} className="mr-1" /> Clear Image
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            onChange={handleBgUpload}
-                            className="hidden"
-                          />
-                          <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="text-xs font-mono text-body bg-canvas hover:bg-canvas-soft border border-hairline px-3 py-1.5 rounded flex items-center justify-center mx-auto"
-                          >
-                            <Upload size={12} className="mr-1.5" /> Upload Background
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                <div className="space-y-2 font-mono">
+                  <div className="flex justify-between">
+                    <span>Rule Grid Line size</span>
+                    <span>{gridSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="20"
+                    max="60"
+                    value={gridSize}
+                    onChange={(e) => setGridSize(parseInt(e.target.value))}
+                    className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
+                  />
+                </div>
 
-                  {paperStyle !== 'plain' && paperStyle !== 'custom' && (
-                    <div>
-                      <div className="flex justify-between text-xs font-mono text-body mb-1">
-                        <span>Ruler / Grid Size</span>
-                        <span>{gridSize}px</span>
+                <div className="space-y-2 font-mono">
+                  <span>Text Alignment</span>
+                  <div className="grid grid-cols-3 gap-1 bg-canvas-soft-2 p-0.5 rounded text-[10px] mt-1">
+                    {['left', 'center', 'right'].map(align => (
+                      <button
+                        key={align}
+                        onClick={() => setAlignment(align)}
+                        className={`py-1 rounded capitalize cursor-pointer ${alignment === align ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+                      >
+                        {align}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-hairline pt-3 space-y-2 font-mono">
+                  <span className="block font-bold text-primary text-[10px] uppercase">Upload Custom Font</span>
+                  <p className="text-[10px] text-mute leading-normal">Upload a handwriting font file (.ttf, .otf, .woff, .woff2) to type directly in your own style.</p>
+                  <input
+                    type="file"
+                    accept=".ttf,.otf,.woff,.woff2"
+                    onChange={handleFontUpload}
+                    className="text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-mono file:bg-canvas-soft-2 file:text-body hover:file:bg-hairline w-full"
+                  />
+                  {customFonts.length > 0 && (
+                    <div className="space-y-1.5 mt-2">
+                      <span className="block text-[9px] uppercase text-mute">Uploaded Custom Fonts:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {customFonts.map(cf => (
+                          <div key={cf.name} className="flex items-center bg-canvas-soft-2 text-[9px] px-2 py-0.5 rounded">
+                            <span className="text-body font-medium truncate max-w-[100px]">{cf.family}</span>
+                            <button
+                              onClick={() => {
+                                setCustomFonts(prev => prev.filter(item => item.name !== cf.name));
+                                if (fontFamily === cf.name) {
+                                  setFontFamily(FONTS[0].family);
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <input
-                        type="range"
-                        min="20"
-                        max="60"
-                        value={gridSize}
-                        onChange={(e) => setGridSize(parseInt(e.target.value))}
-                        className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                      />
                     </div>
                   )}
-                </div>
-
-                <div className="space-y-4">
-                  <span className="block text-[10px] font-mono font-bold uppercase text-mute mb-1">Ink Attributes</span>
-                  <div>
-                    <span className="block text-xs font-mono text-body mb-2">Ink Color Preset</span>
-                    <div className="flex space-x-2">
-                      {[
-                        { color: '#0000ff', name: 'Blue' },
-                        { color: '#1c1917', name: 'Black' },
-                        { color: '#dc2626', name: 'Red' }
-                      ].map(preset => (
-                        <button
-                          key={preset.color}
-                          onClick={() => setInkColor(preset.color)}
-                          className="w-6 h-6 rounded-full border border-hairline cursor-pointer flex items-center justify-center"
-                          style={{ backgroundColor: preset.color }}
-                        >
-                          {inkColor === preset.color && <Check size={12} className="text-white" />}
-                        </button>
-                      ))}
-                      <input
-                        type="color"
-                        value={inkColor}
-                        onChange={(e) => setInkColor(e.target.value)}
-                        className="w-6 h-6 p-0 border border-hairline rounded-full cursor-pointer overflow-hidden"
-                        title="Custom Color"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-mono text-body mb-1.5">Pen / Texture Type</label>
-                    <select
-                      value={inkType}
-                      onChange={(e) => setInkType(e.target.value)}
-                      className="input-field text-xs bg-canvas"
-                    >
-                      <option value="ballpoint">Ballpoint Pen (Standard)</option>
-                      <option value="fountain">Fountain Pen (Smooth Bleed)</option>
-                      <option value="pencil">Pencil (Textured Grain)</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             )}
 
+            {/* Panel: Realism Parameters */}
             {activePanel === 'realism' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Realism Jitters</h3>
+
+                <div className="space-y-3 font-mono">
                   <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span className="flex items-center"><Sparkles size={12} className="text-yellow-500 mr-1" /> Messiness Multiplier</span>
-                      <span>{messiness.toFixed(1)}x</span>
+                    <div className="flex justify-between">
+                      <span>Overall Messiness</span>
+                      <span>{messiness}x</span>
                     </div>
                     <input
                       type="range"
-                      min="0.1"
+                      min="0.0"
                       max="2.5"
                       step="0.1"
                       value={messiness}
-                      onChange={(e) => {
-                        const m = parseFloat(e.target.value);
-                        setMessiness(m);
-                        setRotation(m * 2.2);
-                        setVJitter(m * 1.3);
-                        setHJitter(m * 0.7);
-                        setBaselineDrift(m * 0.9);
-                        setPressureVariation(Math.min(0.3, m * 0.15));
-                      }}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                      onChange={(e) => setMessiness(parseFloat(e.target.value))}
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
                     />
-                    <div className="flex justify-between text-[10px] text-mute font-mono mt-1">
-                      <span>Neat</span>
-                      <span>Chaotic</span>
-                    </div>
                   </div>
                   <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Max Rotation slant</span>
-                      <span>{rotation.toFixed(1)}°</span>
+                    <div className="flex justify-between">
+                      <span>Baseline Slant/Drift</span>
+                      <span>{baselineDrift}px</span>
                     </div>
                     <input
                       type="range"
-                      min="0"
-                      max="8"
+                      min="0.0"
+                      max="3.0"
+                      step="0.1"
+                      value={baselineDrift}
+                      onChange={(e) => setBaselineDrift(parseFloat(e.target.value))}
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Character Jitter</span>
+                      <span>{vJitter}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="4.0"
+                      step="0.1"
+                      value={vJitter}
+                      onChange={(e) => {
+                        setVJitter(parseFloat(e.target.value));
+                        setHJitter(parseFloat(e.target.value) / 2);
+                      }}
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between">
+                      <span>Letter Rotation (deg)</span>
+                      <span>{rotation}°</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="8.0"
                       step="0.2"
                       value={rotation}
                       onChange={(e) => setRotation(parseFloat(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-mono text-body mb-1">
-                      <span>Vertical baseline Jitter</span>
-                      <span>{vJitter.toFixed(1)}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="4"
-                      step="0.1"
-                      value={vJitter}
-                      onChange={(e) => setVJitter(parseFloat(e.target.value))}
-                      className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                      className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3.5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex justify-between text-xs font-mono text-body mb-1">
-                        <span>H-Jitter</span>
-                        <span>{hJitter.toFixed(1)}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="3"
-                        step="0.1"
-                        value={hJitter}
-                        onChange={(e) => setHJitter(parseFloat(e.target.value))}
-                        className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs font-mono text-body mb-1">
-                        <span>Baseline Drift</span>
-                        <span>{baselineDrift.toFixed(1)}px</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        value={baselineDrift}
-                        onChange={(e) => setBaselineDrift(parseFloat(e.target.value))}
-                        className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
-                      />
-                    </div>
+                <div className="border-t border-hairline pt-3 space-y-3">
+                  <span className="font-mono font-bold uppercase text-[9px] text-mute">Textures & Pen Presets</span>
+                  <div className="grid grid-cols-3 gap-1 font-mono text-[10px]">
+                    {['ballpoint', 'fountain', 'pencil'].map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setInkType(type)}
+                        className={`py-1 rounded capitalize border border-hairline cursor-pointer ${inkType === type ? 'bg-primary text-on-primary border-primary font-semibold' : 'bg-canvas hover:bg-canvas-soft text-body'}`}
+                      >
+                        {type}
+                      </button>
+                    ))}
                   </div>
-
-                  <div className="flex items-center justify-between py-1 bg-canvas-soft-2 px-2.5 rounded text-xs font-mono">
-                    <label className="cursor-pointer select-none" htmlFor="smudge-check">Pencil graphite Smudges</label>
+                  <div className="flex items-center justify-between font-mono mt-2">
+                    <span>Smudge overlay</span>
                     <input
-                      id="smudge-check"
                       type="checkbox"
                       checked={smudge}
                       onChange={(e) => setSmudge(e.target.checked)}
-                      className="w-4 h-4 accent-primary"
+                      className="accent-primary w-4 h-4 cursor-pointer"
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-mono text-body mb-1">Consistency Seed</label>
-                      <input
-                        type="number"
-                        value={seed}
-                        onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
-                        className="input-field h-8 text-xs bg-canvas font-mono"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <button 
-                        onClick={() => setSeed(Math.floor(Math.random() * 99999))}
-                        className="btn-secondary h-8 text-xs w-full font-mono cursor-pointer flex items-center justify-center space-x-1"
-                      >
-                        <RefreshCw size={11} />
-                        <span>Reseed</span>
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-between font-mono">
+                    <span>Consistency Seed</span>
+                    <button 
+                      onClick={() => setSeed(Math.floor(Math.random() * 100000))}
+                      className="text-[10px] font-mono hover:underline text-link font-semibold cursor-pointer"
+                    >
+                      {seed} (Regen)
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Panel: Margins, Headers & Footers */}
             {activePanel === 'header' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Margins & Header Settings</h3>
+                
+                <div className="grid grid-cols-2 gap-2.5 font-mono text-[10px]">
                   <div>
-                    <label className="block text-xs font-mono font-semibold uppercase text-body mb-1">Page Header Text</label>
+                    <span>Top Margin (px)</span>
+                    <input
+                      type="number"
+                      value={margins.top}
+                      onChange={(e) => setMargins(m => ({ ...m, top: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="input-field h-7 bg-canvas text-xs"
+                    />
+                  </div>
+                  <div>
+                    <span>Bottom Margin (px)</span>
+                    <input
+                      type="number"
+                      value={margins.bottom}
+                      onChange={(e) => setMargins(m => ({ ...m, bottom: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="input-field h-7 bg-canvas text-xs"
+                    />
+                  </div>
+                  <div>
+                    <span>Left Margin (px)</span>
+                    <input
+                      type="number"
+                      value={margins.left}
+                      onChange={(e) => setMargins(m => ({ ...m, left: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="input-field h-7 bg-canvas text-xs"
+                    />
+                  </div>
+                  <div>
+                    <span>Right Margin (px)</span>
+                    <input
+                      type="number"
+                      value={margins.right}
+                      onChange={(e) => setMargins(m => ({ ...m, right: Math.max(0, parseInt(e.target.value) || 0) }))}
+                      className="input-field h-7 bg-canvas text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-t border-hairline pt-3 font-mono">
+                  <div>
+                    <span>Page Header Fields</span>
                     <input
                       type="text"
                       value={pageHeader}
                       onChange={(e) => setPageHeader(e.target.value)}
-                      placeholder="e.g. Name: _______ Date: _______"
-                      className="input-field text-xs bg-canvas"
+                      placeholder="e.g. Name: ____________ Date: ________"
+                      className="input-field h-8 bg-canvas text-xs mt-1"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-mono font-semibold uppercase text-body mb-1">Page Footer Text</label>
+                    <span>Page Footer Template</span>
                     <input
                       type="text"
                       value={pageFooter}
                       onChange={(e) => setPageFooter(e.target.value)}
                       placeholder="e.g. Page {page} of {pages}"
-                      className="input-field text-xs bg-canvas"
+                      className="input-field h-8 bg-canvas text-xs mt-1"
                     />
                   </div>
+                </div>
+              </div>
+            )}
 
-                  <div className="border-t border-hairline pt-4">
-                    <span className="block text-[10px] font-mono font-bold uppercase text-mute mb-3">Margin & Line Options</span>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between py-2 px-3 bg-canvas-soft-2 rounded">
-                        <label className="text-xs font-mono text-body cursor-pointer select-none">Paper Margin</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-mute font-mono">{margins.left > 0 ? 'on' : 'off'}</span>
+            {/* Panel: Insert Elements */}
+            {activePanel === 'insert' && (
+              <div className="space-y-4">
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Insert Media & Overlays</h3>
+                
+                <div>
+                  <span className="block font-mono font-bold text-primary text-[10px] uppercase mb-1">Insert Image / Signature</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="text-xs font-mono file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-mono file:bg-canvas-soft-2 file:text-body hover:file:bg-hairline w-full"
+                  />
+                </div>
+
+                <div className="border-t border-hairline pt-3 font-mono">
+                  <span className="block font-bold text-primary text-[10px] uppercase mb-1">LaTeX Math Formula</span>
+                  <textarea
+                    value={latexInput}
+                    onChange={(e) => setLatexInput(e.target.value)}
+                    placeholder="\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}"
+                    className="w-full h-16 border border-hairline bg-canvas p-2 rounded text-xs outline-none focus:border-hairline-strong resize-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      showToast('Rendering equation...');
+                      const url = await drawFormulaToDataUrl(latexInput, inkColor);
+                      if (url) {
+                        const newElement: CanvasElement = {
+                          id: String(Date.now()),
+                          type: 'formula',
+                          pageIndex: previewPageIdx,
+                          x: 25,
+                          y: 35,
+                          width: 35,
+                          height: 8,
+                          dataUrl: url
+                        };
+                        setCanvasElements([...canvasElements, newElement]);
+                        showToast('LaTeX Formula Inserted!');
+                      } else {
+                        showToast('Rendering error!', true);
+                      }
+                    }}
+                    className="btn-secondary h-7 text-[10px] mt-1.5 w-full cursor-pointer flex items-center justify-center font-bold"
+                  >
+                    Insert LaTeX Equation
+                  </button>
+                </div>
+
+                <div className="border-t border-hairline pt-3">
+                  <span className="block font-mono font-bold text-primary text-[10px] uppercase mb-2">Sketch Annotation Layer</span>
+                  <button
+                    onClick={() => {
+                      setIsDrawingMode(!isDrawingMode);
+                      if (!isDrawingMode) setEditMode('preview');
+                    }}
+                    className={`w-full h-7 text-[10px] font-mono rounded border flex items-center justify-center space-x-1 transition-colors cursor-pointer ${
+                      isDrawingMode 
+                        ? 'bg-link text-white border-link font-semibold animate-pulse' 
+                        : 'bg-canvas hover:bg-canvas-soft border-hairline text-body'
+                    }`}
+                  >
+                    <span>{isDrawingMode ? 'Drawing Active (Click to Complete)' : 'Enable Sketch Drawing'}</span>
+                  </button>
+                </div>
+
+                <div className="border-t border-hairline pt-3 font-mono">
+                  <span className="block font-bold text-primary text-[10px] uppercase mb-1">Hand-Drawn Grid Table</span>
+                  <div className="grid grid-cols-2 gap-2 text-[9px] mb-1.5">
+                    <div>
+                      <span>Rows:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={tableRowsInput}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setTableRowsInput(val);
+                          const newCells = Array(val).fill(null).map((_, rIdx) => 
+                            Array(tableColsInput).fill(null).map((_, cIdx) => 
+                              (tableCells[rIdx]?.[cIdx] || '')
+                            )
+                          );
+                          setTableCells(newCells);
+                        }}
+                        className="input-field h-6 bg-canvas text-xs"
+                      />
+                    </div>
+                    <div>
+                      <span>Columns:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={tableColsInput}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setTableColsInput(val);
+                          const newCells = Array(tableRowsInput).fill(null).map((_, rIdx) => 
+                            Array(val).fill(null).map((_, cIdx) => 
+                              (tableCells[rIdx]?.[cIdx] || '')
+                            )
+                          );
+                          setTableCells(newCells);
+                        }}
+                        className="input-field h-6 bg-canvas text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-[80px] overflow-y-auto border border-hairline rounded p-1 space-y-1 bg-canvas-soft-2/50 mb-2">
+                    {tableCells.map((row, rIdx) => (
+                      <div key={rIdx} className="flex gap-1">
+                        {row.map((cell, cIdx) => (
                           <input
-                            type="checkbox"
-                            checked={margins.left > 0}
+                            key={cIdx}
+                            type="text"
+                            value={cell}
                             onChange={(e) => {
-                              const val = e.target.checked ? 60 : 0;
-                              setMargins(m => ({ ...m, left: val }));
+                              const newCells = [...tableCells];
+                              newCells[rIdx] = [...newCells[rIdx]];
+                              newCells[rIdx][cIdx] = e.target.value;
+                              setTableCells(newCells);
                             }}
-                            className="w-4 h-4 accent-primary"
+                            placeholder={`R${rIdx+1}C${cIdx+1}`}
+                            className="w-full border border-hairline bg-canvas p-1 rounded font-mono text-[8px] outline-none"
                           />
-                        </div>
+                        ))}
                       </div>
-                      
-                      <div className="flex items-center justify-between py-2 px-3 bg-canvas-soft-2 rounded">
-                        <label className="text-xs font-mono text-body cursor-pointer select-none">Paper Lines</label>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-mute font-mono">{paperStyle !== 'plain' ? 'on' : 'off'}</span>
-                          <input
-                            type="checkbox"
-                            checked={paperStyle !== 'plain'}
-                            onChange={(e) => setPaperStyle(e.target.checked ? 'single-ruled' : 'plain')}
-                            className="w-4 h-4 accent-primary"
-                          />
-                        </div>
-                      </div>
+                    ))}
+                  </div>
 
+                  <button
+                    onClick={async () => {
+                      showToast('Generating hand-drawn table...');
+                      const url = await drawTableToDataUrl(tableCells, fontFamily, inkColor);
+                      if (url) {
+                        const newElement: CanvasElement = {
+                          id: String(Date.now()),
+                          type: 'table',
+                          pageIndex: previewPageIdx,
+                          x: 15,
+                          y: 40,
+                          width: 50,
+                          height: 25,
+                          dataUrl: url
+                        };
+                        setCanvasElements([...canvasElements, newElement]);
+                        showToast('Grid Table inserted!');
+                      }
+                    }}
+                    className="btn-secondary h-7 text-[10px] w-full cursor-pointer flex items-center justify-center font-bold"
+                  >
+                    Draw & Insert Grid Table
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Panel: Presets & Layout loading */}
+            {activePanel === 'paper' && (
+              <div className="space-y-4">
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Presets & Page Backgrounds</h3>
+                
+                {paperStyle === 'custom' && (
+                  <div className="border border-dashed border-hairline rounded-lg p-3 bg-canvas-soft-2/50 text-center space-y-2">
+                    {customBgName ? (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-mono text-body truncate">{customBgName}</p>
+                        <button 
+                          onClick={() => { setCustomBgBitmap(null); if (customBgUrl) URL.revokeObjectURL(customBgUrl); setCustomBgUrl(''); setPaperStyle('plain'); }}
+                          className="text-[10px] font-mono text-red-500 hover:underline flex items-center justify-center mx-auto"
+                        >
+                          Clear Image Background
+                        </button>
+                      </div>
+                    ) : (
                       <div>
-                        <label className="block text-xs font-mono text-body mb-1">Upload Paper Image as Background</label>
                         <input
                           type="file"
                           accept="image/*"
-                          ref={fileInputRef}
                           onChange={handleBgUpload}
-                          className="text-xs font-mono text-body"
+                          className="text-[10px] font-mono w-full"
                         />
                       </div>
-                    </div>
+                    )}
                   </div>
-                </div>
+                )}
+                {paperStyle !== 'custom' && (
+                  <div className="border border-hairline p-3 rounded bg-canvas-soft font-mono text-[10px]">
+                    <span>Upload custom ruled paper scan/photo:</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBgUpload}
+                      className="mt-2 text-[10px] w-full"
+                    />
+                  </div>
+                )}
 
-                <div>
-                  <span className="block text-xs font-mono font-semibold uppercase text-mute mb-2">Page margins (px)</span>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div>
-                      <span>Top Margin</span>
-                      <input
-                        type="number"
-                        value={margins.top}
-                        onChange={(e) => setMargins(m => ({ ...m, top: parseInt(e.target.value) || 0 }))}
-                        className="input-field h-8 bg-canvas text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span>Bottom Margin</span>
-                      <input
-                        type="number"
-                        value={margins.bottom}
-                        onChange={(e) => setMargins(m => ({ ...m, bottom: parseInt(e.target.value) || 0 }))}
-                        className="input-field h-8 bg-canvas text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span>Left Margin</span>
-                      <input
-                        type="number"
-                        value={margins.left}
-                        onChange={(e) => setMargins(m => ({ ...m, left: parseInt(e.target.value) || 0 }))}
-                        className="input-field h-8 bg-canvas text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span>Right Margin</span>
-                      <input
-                        type="number"
-                        value={margins.right}
-                        onChange={(e) => setMargins(m => ({ ...m, right: parseInt(e.target.value) || 0 }))}
-                        className="input-field h-8 bg-canvas text-xs"
-                      />
-                    </div>
+                <div className="border-t border-hairline pt-3 space-y-2 font-mono">
+                  <span className="block font-bold text-primary text-[10px] uppercase">Load Preset Styles</span>
+                  <div className="flex flex-wrap gap-1 max-h-[85px] overflow-y-auto">
+                    {Object.keys(presets).map(name => (
+                      <div key={name} className="group flex items-center bg-canvas-soft-2 text-[9px] font-mono px-2 py-0.5 rounded">
+                        <button 
+                          onClick={() => applyPreset(presets[name])}
+                          className="hover:text-primary mr-1 text-body font-medium cursor-pointer"
+                        >
+                          {name}
+                        </button>
+                        {!DEFAULT_PRESETS[name] && (
+                          <button 
+                            onClick={() => deletePreset(name)}
+                            className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    <input
+                      type="text"
+                      value={newPresetName}
+                      onChange={(e) => setNewPresetName(e.target.value)}
+                      placeholder="Preset name..."
+                      className="input-field h-7 text-xs bg-canvas"
+                    />
+                    <button
+                      onClick={savePreset}
+                      disabled={!newPresetName.trim()}
+                      className="p-1 border border-hairline bg-canvas hover:bg-canvas-soft text-body rounded disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0 w-7 h-7"
+                      title="Save current layout config"
+                    >
+                      <Save size={12} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1210,105 +2051,55 @@ export default function ConverterApp() {
 
           </div>
 
-          {/* Column 3: Presets & Exporter */}
-          <div className="border-t lg:border-t-0 lg:border-l border-hairline pt-6 lg:pt-0 lg:pl-8 space-y-6">
-            
-            {/* Presets block */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-mono font-bold uppercase text-primary flex items-center">
-                <FolderOpen size={13} className="mr-1.5" />
-                <span>presets & layout load</span>
-              </h4>
-              <div className="flex flex-wrap gap-1 max-h-[85px] overflow-y-auto">
-                {Object.keys(presets).map(name => (
-                  <div key={name} className="group flex items-center bg-canvas-soft-2 text-[10px] font-mono px-2 py-1 rounded">
-                    <button 
-                      onClick={() => applyPreset(presets[name])}
-                      className="hover:text-primary mr-1 text-body font-medium cursor-pointer"
-                    >
-                      {name}
-                    </button>
-                    {!DEFAULT_PRESETS[name] && (
-                      <button 
-                        onClick={() => deletePreset(name)}
-                        className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-1.5 mt-2">
-                <input
-                  type="text"
-                  value={newPresetName}
-                  onChange={(e) => setNewPresetName(e.target.value)}
-                  placeholder="Save layout as..."
-                  className="input-field h-8 text-xs bg-canvas"
-                />
-                <button
-                  onClick={savePreset}
-                  disabled={!newPresetName.trim()}
-                  className="p-1 border border-hairline bg-canvas hover:bg-canvas-soft text-body rounded disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0 w-8"
-                  title="Save current configuration"
+          {/* Exporter Block (Always anchored at the bottom of the sidebar) */}
+          <div className="border-t border-hairline pt-4 space-y-3 mt-4">
+            <h4 className="text-[10px] font-mono font-bold uppercase text-primary flex items-center">
+              <Download size={12} className="mr-1.5" />
+              <span>Export document options</span>
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+              <div>
+                <span>DPI Quality</span>
+                <select
+                  value={exportDpi}
+                  onChange={(e) => setExportDpi(e.target.value)}
+                  className="input-field h-7 text-xs bg-canvas mt-1 outline-none"
                 >
-                  <Save size={14} />
-                </button>
+                  <option value="1.0">Screen (1x)</option>
+                  <option value="2.0">Medium (2x)</option>
+                  <option value="3.0">Print 300DPI (3x)</option>
+                </select>
+              </div>
+              <div>
+                <span>PDF Format</span>
+                <select
+                  value={exportPaper}
+                  onChange={(e) => setExportPaper(e.target.value as any)}
+                  className="input-field h-7 text-xs bg-canvas mt-1 outline-none"
+                >
+                  <option value="a4">A4 Page</option>
+                  <option value="letter">Letter</option>
+                  <option value="legal">Legal</option>
+                </select>
               </div>
             </div>
 
-            {/* Exporter Block */}
-            <div className="border-t border-hairline pt-4 space-y-3">
-              <h4 className="text-xs font-mono font-bold uppercase text-primary flex items-center">
-                <Download size={13} className="mr-1.5" />
-                <span>export document</span>
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div>
-                  <span>DPI Quality</span>
-                  <select
-                    value={exportDpi}
-                    onChange={(e) => setExportDpi(e.target.value)}
-                    className="input-field h-8 text-xs bg-canvas mt-1"
-                  >
-                    <option value="1.0">Screen (1x)</option>
-                    <option value="2.0">Medium (2x)</option>
-                    <option value="3.0">Print 300DPI (3x)</option>
-                  </select>
-                </div>
-                <div>
-                  <span>PDF Format</span>
-                  <select
-                    value={exportPaper}
-                    onChange={(e) => setExportPaper(e.target.value as any)}
-                    className="input-field h-8 text-xs bg-canvas mt-1"
-                  >
-                    <option value="a4">A4 Page</option>
-                    <option value="letter">Letter</option>
-                    <option value="legal">Legal</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <button
-                  disabled={pagesBuffers.length === 0}
-                  onClick={handleDownloadImages}
-                  className="btn-secondary text-xs w-full py-2 cursor-pointer font-mono font-medium disabled:opacity-30"
-                >
-                  ZIP (PNGs)
-                </button>
-                <button
-                  disabled={pagesBuffers.length === 0}
-                  onClick={handleDownloadPdf}
-                  className="btn-primary text-xs w-full py-2 cursor-pointer font-mono font-medium disabled:opacity-30"
-                >
-                  PDF Document
-                </button>
-              </div>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button
+                disabled={pagesBuffers.length === 0}
+                onClick={handleDownloadImages}
+                className="btn-secondary text-[11px] w-full py-1.5 cursor-pointer font-mono font-bold disabled:opacity-30 flex items-center justify-center"
+              >
+                ZIP (PNGs)
+              </button>
+              <button
+                disabled={pagesBuffers.length === 0}
+                onClick={handleDownloadPdf}
+                className="btn-primary text-[11px] w-full py-1.5 cursor-pointer font-mono font-bold disabled:opacity-30 flex items-center justify-center"
+              >
+                PDF Document
+              </button>
             </div>
-
           </div>
 
         </div>

@@ -42,7 +42,23 @@ export const FONTS: FontItem[] = [
   { name: 'Amita', family: 'Amita', category: 'cursive', path: '/fonts/cursive/Amita.woff2' },
   { name: 'Tillana', family: 'Tillana', category: 'neat', path: '/fonts/neat/Tillana.woff2' },
   { name: 'YatraOne', family: 'Yatra One', category: 'calligraphy', path: '/fonts/calligraphy/YatraOne.woff2' },
-  { name: 'Laila', family: 'Laila', category: 'neat', path: '/fonts/neat/Laila.woff2' }
+  { name: 'Laila', family: 'Laila', category: 'neat', path: '/fonts/neat/Laila.woff2' },
+
+  // Added requested realistic handwriting fonts
+  { name: 'HomemadeApple', family: 'Homemade Apple', category: 'cursive', path: '/fonts/cursive/HomemadeApple.woff2' },
+  { name: 'LiuJianMaoCao', family: 'Liu Jian Mao Cao', category: 'cursive', path: '/fonts/cursive/LiuJianMaoCao.woff2' },
+  { name: 'JustAnotherHand', family: 'Just Another Hand', category: 'messy', path: '/fonts/messy/JustAnotherHand.woff2' },
+  { name: 'CedarvilleCursive', family: 'Cedarville Cursive', category: 'cursive', path: '/fonts/cursive/CedarvilleCursive.woff2' },
+  { name: 'DawningofaNewDay', family: 'Dawning of a New Day', category: 'messy', path: '/fonts/messy/DawningofaNewDay.woff2' },
+  { name: 'Zeyada', family: 'Zeyada', category: 'messy', path: '/fonts/messy/Zeyada.woff2' },
+  { name: 'LaBelleAurore', family: 'La Belle Aurore', category: 'cursive', path: '/fonts/cursive/LaBelleAurore.woff2' },
+  { name: 'GloriaHallelujah', family: 'Gloria Hallelujah', category: 'kids', path: '/fonts/kids/GloriaHallelujah.woff2' },
+  { name: 'LovedbytheKing', family: 'Loved by the King', category: 'messy', path: '/fonts/messy/LovedbytheKing.woff2' },
+  { name: 'BadScript', family: 'Bad Script', category: 'neat', path: '/fonts/neat/BadScript.woff2' },
+  { name: 'Mynerve', family: 'Mynerve', category: 'neat', path: '/fonts/neat/Mynerve.woff2' },
+  { name: 'WaitingfortheSunrise', family: 'Waiting for the Sunrise', category: 'neat', path: '/fonts/neat/WaitingfortheSunrise.woff2' },
+  { name: 'CoveredByYourGrace', family: 'Covered By Your Grace', category: 'neat', path: '/fonts/neat/CoveredByYourGrace.woff2' },
+  { name: 'ComingSoon', family: 'Coming Soon', category: 'neat', path: '/fonts/neat/ComingSoon.woff2' }
 ];
 
 export const CATEGORIES = [

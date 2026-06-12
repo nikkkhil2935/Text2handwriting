@@ -1,0 +1,105 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SignatureApp from '../components/signature/SignatureApp';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const signatureSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  'name': 'Online Signature Generator',
+  'operatingSystem': 'Any',
+  'applicationCategory': 'UtilitiesApplication',
+  'description': 'Create custom handwritten electronic signatures. Type your name to auto-render script styles or draw signatures freehand. Export as transparent PNG or vector SVG.',
+  'offers': {
+    '@type': 'Offer',
+    'price': '0.00',
+    'priceCurrency': 'USD'
+  }
+};
+---
+
+<BaseLayout 
+  title="Signature Generator - Free Online Signature Maker (PNG/SVG)"
+  description="Design custom handwritten signatures online. Type your initials to render cursive styles or draw a signature manually. Download transparent PNGs and SVGs instantly."
+  activeTab="home"
+  showHeroGradient={true}
+  fullWidth={true}
+  schema={signatureSchema}
+>
+  <div class="space-y-6">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Free Online Signature Generator</h1>
+      <p class="text-xs text-mute font-mono">Design professional handwritten signatures from text typing or draw freehand.</p>
+    </div>
+
+    <SignatureApp client:load />
+
+    <!-- Rich SEO Content Section (600+ Words) -->
+    <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">What is an Electronic Signature?</h2>
+          <p>
+            An electronic signature (e-signature) is a digital representation of a person's handwritten signature used to authorize documents, sign PDFs, or verify contracts online. With businesses moving to digital document signing, having a clear, professional e-signature is essential.
+          </p>
+          <p>
+            Our free online signature generator provides two ways to create your electronic signature: typing your name to convert it into professional cursive styles using cursive script fonts, or drawing it freehand using your mouse or touch screen.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">How to Choose a Signature style</h2>
+          <p>
+            A good signature should be readable yet personalized. When designing your signature:
+          </p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Select the Right Font:</strong> Use flowing, flowing fonts like <em>Alex Brush</em>, <em>Mr De Haviland</em>, or <em>Pinyon Script</em>.</li>
+            <li><strong>Adjust Ink Color:</strong> Blue and black remain the standard ink colors for legal documents and business correspondence.</li>
+            <li><strong>Control Slant:</strong> Add a forward tilt to your signature (around 5 to 10 degrees) to give it a dynamic, fluid appearance.</li>
+            <li><strong>Check Stroke Width:</strong> Ensure the pen thickness is visible and does not look blurry when resized on invoices or PDFs.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Drawing vs Typing Your Signature Online</h2>
+        <p>
+          Both methods have unique advantages depending on your needs:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="border border-hairline p-4 rounded bg-canvas-soft">
+            <h4 class="font-bold text-primary mb-1">Method 1: Type to Signature</h4>
+            <p class="text-xs">
+              Type your initials or full name. The generator renders it instantly using specialized calligraphy and script fonts. You can adjust font size, angles, and color. This is ideal if you want a clean, legible signature without drawing.
+            </p>
+          </div>
+          <div class="border border-hairline p-4 rounded bg-canvas-soft">
+            <h4 class="font-bold text-primary mb-1">Method 2: Draw to Signature</h4>
+            <p class="text-xs">
+              Use your finger, stylus, or cursor to write directly on the sketch canvas. This creates a completely unique signature vector. Recommended for authentic document signatures where visual replica of your real signature is needed.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Is My Signature Safe on Your Server?</h2>
+        <p>
+          Yes! We prioritize your security and privacy. Unlike other signature tools that upload your canvas images to their databases, **our signature maker runs completely client-side in your browser**. Your text inputs, uploads, and sketched strokes are never transmitted to any external server. The PNG and SVG export operations happen locally in your web browser, keeping your personal data completely private.
+        </p>
+      </div>
+
+      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
+        <h3 class="text-xs font-mono font-bold uppercase text-primary">Need Lined or Ruled Notebook Sheets?</h3>
+        <p class="text-xs">
+          If you need notebook papers or lined sheets to practice your handwriting, check out the <a href="/notebook-paper-generator" class="text-link hover:underline">ruled notebook paper maker</a>, format school assignments with the <a href="/assignment-formatter" class="text-link hover:underline">assignment formatter</a>, or convert large text files in batches using the <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a>.
+        </p>
+      </div>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

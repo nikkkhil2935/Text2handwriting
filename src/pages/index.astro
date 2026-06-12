@@ -3,11 +3,71 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ConverterApp from '../components/converter/ConverterApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+// 14 Handwriting FAQs
+const FAQS = [
+  {
+    q: 'How do I convert text to handwriting online?',
+    a: 'Simply type or paste your digital text into our editor, select your preferred handwriting font and paper style, and customize the realism engine to add natural slants, baseline drift, and ink pressure. You can then download the resulting sheets as PNG images or combined PDFs.'
+  },
+  {
+    q: 'Is the handwriting generator free?',
+    a: 'Yes! Our text-to-handwriting converter is completely free to use without any limitations, registration requirements, or watermarks. All high-quality PDF and image exports are accessible for free.'
+  },
+  {
+    q: 'Can I insert images or formulas into my handwritten document?',
+    a: 'Yes, you can upload diagrams, sketches, and signatures directly onto the live canvas preview. You can also insert mathematical equations using LaTeX notation, which gets rendered with KaTeX. All elements can be dragged, resized, and positioned anywhere on the page.'
+  },
+  {
+    q: 'How do I download my handwriting as a PDF?',
+    a: 'Navigate to the export panel on the sidebar, select "PDF Document", choose your desired page size (A4, Letter, or Legal) and DPI quality, and click export. Multi-page document lines are sequentially compiled into a single file.'
+  },
+  {
+    q: 'Can I generate multiple pages at once?',
+    a: 'Yes! The system auto-paginates your text dynamically based on the font size, line height, and page margins. You can also manually insert page breaks using the "---page break---" delimiter.'
+  },
+  {
+    q: 'How realistic does the handwriting look?',
+    a: 'Extremely realistic! Our realism engine simulates natural human inconsistencies by introducing character-by-character slant variations, random vertical and horizontal jitters, line baseline drifts, and stroke pressure variations.'
+  },
+  {
+    q: 'Can I use this for school and college assignments?',
+    a: 'Absolutely. Many students use this tool to write practical records, assignment submissions, and homework files to save time. We recommend using neat printing fonts like Architects Daughter or Kalam for academic submissions.'
+  },
+  {
+    q: 'What fonts are available on the platform?',
+    a: 'We offer over 20 handwriting fonts categorized into neat script, flowing cursive, messy jotting, signatures, and calligraphy styles. All fonts are self-hosted and load instantly in the editor.'
+  },
+  {
+    q: 'Can I change the ink color?',
+    a: 'Yes, you can choose from standard ink presets (royal blue, classic black, correction red) or use our custom color picker to select any ink hex code. You can also customize the pen texture (ballpoint, fountain, or pencil).'
+  },
+  {
+    q: 'Is there a bulk generator for multiple documents?',
+    a: 'Yes, our bulk generator page allows you to paste multiple documents separated by delimiters, upload CSV sheets, or load text files in parallel. It uses browser Web Workers to process document batches in the background.'
+  },
+  {
+    q: 'Can I write in cursive?',
+    a: 'Yes, you can select cursive fonts like Dancing Script or Sacramento and adjust character spacing slightly negative to pull ligatures closer together, creating continuous script lines.'
+  },
+  {
+    q: 'Do I need to install any software or extensions?',
+    a: 'No. The generator runs completely in your web browser using HTML5 Canvas API and Web Workers. It does not require any plugins, local installs, or extensions.'
+  },
+  {
+    q: 'Can I use my own paper background?',
+    a: 'Yes! You can upload an image of your own physical ruled or blank paper under the margins and background settings. The engine will render the handwritten text directly onto your uploaded image.'
+  },
+  {
+    q: 'Is my data saved or sent to a server?',
+    a: 'No. Privacy is central to our design. All text rendering, image processing, LaTeX generation, and PDF compilations are done locally in your browser. No personal data or document content is uploaded to our servers.'
+  }
+];
+
 // JSON-LD SoftwareApplication schema for SEO
 const appSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  'name': 'Text to Handwriting Converter',
+  'name': 'ScribbleCraft Text to Handwriting',
   'operatingSystem': 'Any',
   'applicationCategory': 'EducationalApplication',
   'offers': {
@@ -22,24 +82,14 @@ const appSchema = {
 const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  'mainEntity': [
-    {
-      '@type': 'Question',
-      'name': 'How do I generate realistic handwriting from text?',
-      'acceptedAnswer': {
-        '@type': 'Answer',
-        'text': 'Type or paste your text into the editor, select a font and paper background style, and adjust the messiness multiplier. Our realism engine adds random character rotation, vertical jitter, line baseline drift, and pressure variations to simulate natural writing.'
-      }
-    },
-    {
-      '@type': 'Question',
-      'name': 'Can I download the output as a PDF?',
-      'acceptedAnswer': {
-        '@type': 'Answer',
-        'text': 'Yes! You can export single or multiple pages as a print-ready PDF (A4, Letter, or Legal) at standard or high resolution (300dpi).'
-      }
+  'mainEntity': FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
     }
-  ]
+  }))
 };
 
 const pageSchema = {
@@ -48,8 +98,8 @@ const pageSchema = {
 ---
 
 <BaseLayout 
-  title="Text to Handwriting Converter - Realistic Handwritten Notes Maker"
-  description="Convert your digital notes and assignments into highly realistic handwritten pages. Pick from 20 handwriting fonts, customize grids, margins, baseline drift, and export as PDF/ZIP."
+  title="Text to Handwriting Converter - Online Handwritten Notes Maker"
+  description="Convert digital notes and school assignments into highly realistic handwritten pages. Pick from 20 handwriting fonts, customize grids, margins, baseline drift, and export as PDF/ZIP."
   activeTab="home"
   showHeroGradient={true}
   fullWidth={true}
@@ -62,6 +112,77 @@ const pageSchema = {
 
     <!-- Core Interactive Island -->
     <ConverterApp client:load />
+
+    <!-- Rich SEO Content Section (600+ Words) -->
+    <div class="max-w-4xl mx-auto py-16 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono text-center">Text to Handwriting Converter</h1>
+      
+      <p class="text-center font-mono text-mute text-xs">The premium web tool for creating authentic handwritten documents, letters, signatures, and homework templates.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Convert Text to Handwritten Notes Online: How it Works</h2>
+          <p>
+            Writing notes or filling assignments manually can consume hours of your time. Our online <strong>text to handwriting converter</strong> streamlines this task by allowing you to paste typed notes directly into our canvas editor and translate them instantly into natural handwriting. 
+          </p>
+          <p>
+            The system works entirely within your web browser. Type or paste your files, configure the typography parameters, specify the sheet format, and trigger the export. Our backend renderer handles page overflows dynamically, inserting page splits to maintain clean breaks.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Free Realistic Handwriting Fonts for Assignments and Documents</h2>
+          <p>
+            Standard digital writing generators look fake because each letter has the exact same dimensions and spacing. ScribbleCraft features a custom <strong>realism engine</strong> that dynamically offsets baseline levels, introduces random character-by-character slants, and simulates stroke pressure variations.
+          </p>
+          <p>
+            Choose from over 20 handwriting font styles, including neat script styles for academic reports, chaotic styles for notes, and flowing cursive options. To write continuous cursive paragraphs, visit our specialized <a href="/text-to-cursive" class="text-link hover:underline">text to cursive converter</a>, select cursive script fonts, and adjust character spacing to link ligatures together seamlessly.
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Advanced Features: Ruled Paper Styles, Image Overlays, and LaTeX Formulas</h2>
+        <p>
+          Our platform is equipped with advanced editing controls to format assignments and notes. Customize line-ruled notebook papers using the <a href="/notebook-paper-generator" class="text-link hover:underline">notebook paper generator</a>, choosing from A4 sheets, graph grid templates, dot-grid spreads, and legal pads. 
+        </p>
+        <p>
+          You can insert custom images (like diagrams, sketches, or illustrations) and place them directly on the canvas page using drag-and-drop handles. If you are preparing mathematics or physics notes, write equations using LaTeX notation; the system renders them inline using KaTeX. You can also sketch drawings directly on the canvas or design custom signatures using our <a href="/signature-generator" class="text-link hover:underline">signature generator</a>.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Bulk Handwriting Generator: Queue Batches and Zip Exports</h2>
+        <p>
+          Need to generate 100 pages of assignments or process large datasets? Our <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a> is built to run batch tasks in parallel. Paste multiple paragraphs separated by dividers, upload text documents, or import CSV rows containing overrides.
+        </p>
+        <p>
+          The bulk generator delegates compiling queues to browser Web Workers, ensuring the main thread remains responsive. Track progress on the active progress indicators and download the compiled files as structured ZIP files or compiled multi-page PDFs.
+        </p>
+        <p>
+          Ready to try it out? Select one of our neat configurations or view our side-by-side styles on the <a href="/handwriting-font-preview" class="text-link hover:underline">handwriting font preview page</a>. You can also pre-load templates directly from our <a href="/assignment-formatter" class="text-link hover:underline">assignment formatter</a> page.
+        </p>
+      </div>
+
+      <!-- FAQ Section Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+    </div>
 
     <!-- Ad Slot: Above footer -->
     <AdSlot slotId="footer-leaderboard" />

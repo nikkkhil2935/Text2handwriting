@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Server Error (500) - ScribbleCraft"
+  description="An unexpected error occurred. Please refresh or try again later."
+>
+  <div class="max-w-md mx-auto py-16 text-center space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-7xl font-extrabold tracking-widest text-primary font-mono select-none">500</h1>
+      <p class="text-xs font-mono font-bold uppercase text-mute">Internal Server Error</p>
+    </div>
+
+    <p class="text-xs md:text-sm text-body leading-relaxed">
+      Something went wrong on our server. If you were executing a bulk generation task, please note that all rendering executes in your browser, so your files and states have not been lost. Try reloading the active page.
+    </p>
+
+    <div class="pt-4 flex justify-center space-x-3 font-mono text-xs">
+      <button
+        onclick="window.location.reload()"
+        class="px-5 py-2.5 rounded-full border border-hairline bg-canvas hover:bg-canvas-soft text-primary cursor-pointer transition-colors shadow-sm font-bold uppercase tracking-wider"
+      >
+        Retry / Reload
+      </button>
+      <a
+        href="/"
+        class="px-5 py-2.5 rounded-full border border-hairline bg-primary hover:bg-canvas-soft text-on-primary hover:text-primary transition-colors shadow-sm font-bold uppercase tracking-wider"
+      >
+        Go Home
+      </a>
+    </div>
+
+    <p class="text-[10px] text-mute font-mono">
+      If this problem persists, feel free to report it on our <a href="/contact-us" class="underline hover:text-primary">Contact Us</a> page.
+    </p>
+  </div>
+</BaseLayout>

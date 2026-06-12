@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ConverterApp from '../components/converter/ConverterApp';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const assignmentSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  'name': 'Online Homework & Assignment Formatter',
+  'operatingSystem': 'Any',
+  'applicationCategory': 'EducationalApplication',
+  'description': 'Convert typed notes and homework sheets into realistic handwritten school assignments. Includes margin styling, paper line alignment, and multi-page exports.',
+  'offers': {
+    '@type': 'Offer',
+    'price': '0.00',
+    'priceCurrency': 'USD'
+  }
+};
+---
+
+<BaseLayout 
+  title="Assignment Handwriting Maker - Free Homework Page Formatter"
+  description="Convert your school homework and college assignments into realistic handwritten pages. Customize notebook lines, margin layouts, and download print-ready PDFs."
+  activeTab="home"
+  showHeroGradient={true}
+  fullWidth={true}
+  schema={assignmentSchema}
+>
+  <div class="space-y-6">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Assignment Handwriting Formatter</h1>
+      <p class="text-xs text-mute font-mono">Convert your homework text files into realistic, neat handwritten assignment sheets.</p>
+    </div>
+
+    <ConverterApp client:load defaultFont="Architects Daughter" defaultPaper="a4-notebook" />
+
+    <!-- Rich SEO Content Section (600+ Words) -->
+    <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Why Automate Homework Assignments?</h2>
+          <p>
+            Students are frequently faced with the tedious chore of handwriting massive practical files, lab summaries, and homework sheets. Writing 50 to 100 pages manually is physically exhausting, time-consuming, and takes away time from actual learning or programming.
+          </p>
+          <p>
+            Our assignment handwriting maker allows you to input typed document text and render it instantly as if written by hand. Choose standard neat school print fonts, customize margin guidelines, and download high-quality PDFs ready for submission.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Choosing the Best Fonts for School Homework</h2>
+          <p>
+            When creating assignment sheets, legibility for teachers represents the top priority. Avoid complex signature scripts and instead use neat handwriting variants:
+          </p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Architects Daughter:</strong> The standard academic printing font. Highly legible, clean layout, and matches classical school notebooks.</li>
+            <li><strong>Kalam:</strong> A neat Indian handwriting style. Excellent spacing and looks authentic.</li>
+            <li><strong>Patrick Hand:</strong> A rounded, clean printing font. Feels very natural.</li>
+            <li><strong>Amita:</strong> Designed for assignments requiring both English and Devanagari (Hindi) scripts.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">How to Set Up Perfect Lined Margin Layouts</h2>
+        <p>
+          To make your online assignment maker output look authentic, alignment to notebook rules is key:
+        </p>
+        <ol class="list-decimal pl-5 space-y-1.5">
+          <li><strong>Ruled Spacing:</strong> Set your paper background to <em>A4 Notebook Ruled</em> and adjust the line size to match your font size. Standard ruled sheets use 30px guidelines.</li>
+          <li><strong>Define Left Margin:</strong> Ensure you enable the red margin line. This aligns the start of your lines and provides space for index numbers and teacher remarks.</li>
+          <li><strong>Header Fields:</strong> Include student name, subject title, and date in the page header text field to render them at the top margin of every page.</li>
+          <li><strong>Page Numbering:</strong> Enable footers formatted as <code>{"Page {page} of {pages}"}</code> to keep multi-page document bundles organized.</li>
+        </ol>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">High-Quality Printing Guidelines for Submissions</h2>
+        <p>
+          When exporting your handwritten assignments, choose **Print 300DPI (3x Quality)**. Standard screen resolutions look pixelated when printed. High-resolution exports render smooth curves, sharp ruled lines, and realistic pen bleeding, making your printouts look completely authentic when printed on physical paper.
+        </p>
+      </div>
+
+      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
+        <h3 class="text-xs font-mono font-bold uppercase text-primary">Need Bulk Generation for Large Assignment Batches?</h3>
+        <p class="text-xs">
+          If you have multiple documents or a 100-page assignment run, use the <a href="/bulk-generator" class="text-link hover:underline">bulk generator tool</a>. It uses parallel workers to process files in a queue. You can also generate signatures with the <a href="/signature-generator" class="text-link hover:underline">signature generator</a>, or view all script styles in the <a href="/handwriting-font-preview" class="text-link hover:underline">font catalog</a>.
+        </p>
+      </div>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

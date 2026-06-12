@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 @theme {
   --color-primary: #171717;
@@ -293,6 +294,118 @@ body {
 @font-face {
   font-family: 'Yatra One';
   src: url('/fonts/calligraphy/YatraOne.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Homemade Apple';
+  src: url('/fonts/cursive/HomemadeApple.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Liu Jian Mao Cao';
+  src: url('/fonts/cursive/LiuJianMaoCao.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Just Another Hand';
+  src: url('/fonts/messy/JustAnotherHand.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cedarville Cursive';
+  src: url('/fonts/cursive/CedarvilleCursive.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Dawning of a New Day';
+  src: url('/fonts/messy/DawningofaNewDay.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Zeyada';
+  src: url('/fonts/messy/Zeyada.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'La Belle Aurore';
+  src: url('/fonts/cursive/LaBelleAurore.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gloria Hallelujah';
+  src: url('/fonts/kids/GloriaHallelujah.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Loved by the King';
+  src: url('/fonts/messy/LovedbytheKing.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bad Script';
+  src: url('/fonts/neat/BadScript.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mynerve';
+  src: url('/fonts/neat/Mynerve.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Waiting for the Sunrise';
+  src: url('/fonts/neat/WaitingfortheSunrise.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Covered By Your Grace';
+  src: url('/fonts/neat/CoveredByYourGrace.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Coming Soon';
+  src: url('/fonts/neat/ComingSoon.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;

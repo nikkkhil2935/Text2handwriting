@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const FAQS = [
+  {
+    q: 'How do I convert text to handwriting online?',
+    a: 'Simply type or paste your digital text into our editor, select your preferred handwriting font and paper style, and customize the realism engine to add natural slants, baseline drift, and ink pressure. You can then download the resulting sheets as PNG images or combined PDFs.'
+  },
+  {
+    q: 'Is the handwriting generator free?',
+    a: 'Yes! Our text-to-handwriting converter is completely free to use without any limitations, registration requirements, or watermarks. All high-quality PDF and image exports are accessible for free.'
+  },
+  {
+    q: 'Can I insert images or formulas into my handwritten document?',
+    a: 'Yes, you can upload diagrams, sketches, and signatures directly onto the live canvas preview. You can also insert mathematical equations using LaTeX notation, which gets rendered with KaTeX. All elements can be dragged, resized, and positioned anywhere on the page.'
+  },
+  {
+    q: 'How do I download my handwriting as a PDF?',
+    a: 'Navigate to the export panel on the sidebar, select "PDF Document", choose your desired page size (A4, Letter, or Legal) and DPI quality, and click export. Multi-page document lines are sequentially compiled into a single file.'
+  },
+  {
+    q: 'Can I generate multiple pages at once?',
+    a: 'Yes! The system auto-paginates your text dynamically based on the font size, line height, and page margins. You can also manually insert page breaks using the "---page break---" delimiter.'
+  },
+  {
+    q: 'How realistic does the handwriting look?',
+    a: 'Extremely realistic! Our realism engine simulates natural human inconsistencies by introducing character-by-character slant variations, random vertical and horizontal jitters, line baseline drifts, and stroke pressure variations.'
+  },
+  {
+    q: 'Can I use this for school and college assignments?',
+    a: 'Absolutely. Many students use this tool to write practical records, assignment submissions, and homework files to save time. We recommend using neat printing fonts like Architects Daughter or Kalam for academic submissions.'
+  },
+  {
+    q: 'What fonts are available on the platform?',
+    a: 'We offer over 20 handwriting fonts categorized into neat script, flowing cursive, messy jotting, signatures, and calligraphy styles. All fonts are self-hosted and load instantly in the editor.'
+  },
+  {
+    q: 'Can I change the ink color?',
+    a: 'Yes, you can choose from standard ink presets (royal blue, classic black, correction red) or use our custom color picker to select any ink hex code. You can also customize the pen texture (ballpoint, fountain, or pencil).'
+  },
+  {
+    q: 'Is there a bulk generator for multiple documents?',
+    a: 'Yes, our bulk generator page allows you to paste multiple documents separated by delimiters, upload CSV sheets, or load text files in parallel. It uses browser Web Workers to process document batches in the background.'
+  },
+  {
+    q: 'Can I write in cursive?',
+    a: 'Yes, you can select cursive fonts like Dancing Script or Sacramento and adjust character spacing slightly negative to pull ligatures closer together, creating continuous script lines.'
+  },
+  {
+    q: 'Do I need to install any software or extensions?',
+    a: 'No. The generator runs completely in your web browser using HTML5 Canvas API and Web Workers. It does not require any plugins, local installs, or extensions.'
+  },
+  {
+    q: 'Can I use my own paper background?',
+    a: 'Yes! You can upload an image of your own physical ruled or blank paper under the margins and background settings. The engine will render the handwritten text directly onto your uploaded image.'
+  },
+  {
+    q: 'Is my data saved or sent to a server?',
+    a: 'No. Privacy is central to our design. All text rendering, image processing, LaTeX generation, and PDF compilations are done locally in your browser. No personal data or document content is uploaded to our servers.'
+  }
+];
+
+const faqPageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+---
+
+<BaseLayout
+  title="FAQ - Handwriting Generator Help & Questions"
+  description="Find answers to frequently asked questions about converting text to handwriting, custom PDF exports, bulk queue processing, and electronic signatures."
+  activeTab="faq"
+  schema={faqPageSchema}
+>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Frequently Asked Questions</h1>
+      <p class="text-xs text-mute font-mono mt-1">Everything you need to know about the Text to Handwriting platform.</p>
+    </div>
+
+    <!-- FAQ Accordions -->
+    <div class="space-y-4 pt-4">
+      {FAQS.map(faq => (
+        <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+          <summary class="flex justify-between items-center font-mono font-semibold text-xs md:text-sm text-primary p-5 cursor-pointer select-none">
+            <span>{faq.q}</span>
+            <span class="text-mute group-open:rotate-180 transition-transform font-bold text-base leading-none">↓</span>
+          </summary>
+          <div class="px-5 pb-5 pt-0 text-xs md:text-sm text-body leading-relaxed border-t border-hairline/50 mt-1 pt-3">
+            <p>{faq.a}</p>
+          </div>
+        </details>
+      ))}
+    </div>
+
+    <div class="bg-canvas-soft p-6 rounded-lg border border-hairline space-y-3 mt-8">
+      <h3 class="text-xs font-mono font-bold uppercase text-primary">Still have questions?</h3>
+      <p class="text-xs text-body leading-relaxed">
+        If you have questions that aren't answered above, feel free to visit our <a href="/about-us" class="text-link hover:underline">About Us</a> page or drop us a line directly through the <a href="/contact-us" class="text-link hover:underline">Contact Us</a> form. We're here to help!
+      </p>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

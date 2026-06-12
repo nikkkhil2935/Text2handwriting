@@ -1,0 +1,92 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const privacySchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  'name': 'Privacy Policy - ScribbleCraft Text to Handwriting',
+  'description': 'Read the ScribbleCraft Privacy Policy. Learn about our local browser-only data processing model, cookies, and analytics policies.'
+};
+---
+
+<BaseLayout
+  title="Privacy Policy - Client-Side Data Safeguards"
+  description="Read about how ScribbleCraft protects your privacy. Learn how all text-to-handwriting generation, images, and signatures are processed completely in your browser."
+  activeTab="privacy"
+  schema={privacySchema}
+>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Privacy Policy</h1>
+      <p class="text-xs text-mute font-mono mt-1">Effective Date: June 12, 2026. Your privacy is our priority.</p>
+    </div>
+
+    <div class="space-y-6 text-xs md:text-sm text-body leading-relaxed">
+      <p>
+        At ScribbleCraft, we take your privacy seriously. This Privacy Policy explains our practices regarding the collection, use, disclosure, and protection of information when you use our online text-to-handwriting conversion tools, signature generators, and related services.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">1. Client-Side Processing (Zero Uploads)</h2>
+      <p>
+        The core architecture of ScribbleCraft is designed to be **entirely client-side**. This means:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>No Text Uploads:</strong> Any paragraphs, letters, or assignments you type or paste into our editor are processed directly in your web browser. We never upload your text to external servers.</li>
+        <li><strong>No Image Uploads:</strong> When you insert custom diagrams, drawings, or background paper images, the file reading and canvas composition happen locally using your browser's APIs (FileReader, HTML5 Canvas). No images are saved or transmitted to our servers.</li>
+        <li><strong>No Signature Uploads:</strong> Handwritten signatures drawn on the canvas or typed signatures remain fully isolated within your browser's local sandbox memory.</li>
+        <li><strong>Local PDF Compiler:</strong> Compiled PDFs and ZIP packages are generated locally using <code>pdf-lib</code> and <code>JSZip</code> directly inside your browser window.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">2. Information We Collect</h2>
+      <p>
+        Although we do not upload or monitor your documents, we may collect minimal data to maintain page performance and support basic site operations:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Usage Statistics:</strong> We may use basic, privacy-friendly analytics to count page views and gather aggregate traffic details (such as browser type, operating system version, and general geography) to optimize site styling and loading speeds.</li>
+        <li><strong>Local Storage:</strong> We may use your browser's local storage to save your editor configuration settings (such as default font size, margin width, line spacing, and pen color) for convenience when you return to the page.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">3. Cookies and Tracking</h2>
+      <p>
+        Cookies are small text files placed on your device to help websites run efficiently. We may use cookies for:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>Saving layout preferences and canvas presets.</li>
+        <li>Serving contextual advertisements (if enabled in future versions).</li>
+        <li>Gathering anonymous analytics data.</li>
+      </ul>
+      <p>
+        You can choose to disable or block cookies through your individual browser settings; however, doing so might require you to re-adjust editor settings on every visit.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">4. Third-Party Services</h2>
+      <p>
+        Our platform integrates certain third-party scripts to serve assets and support visual layouts:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Web Fonts:</strong> We use Google Fonts to render user-interface headings and body text. These fonts are fetched from Google servers, which may log IP requests.</li>
+        <li><strong>Ad Networks:</strong> We include disabled placeholders for ad units. If enabled in future versions, these providers (such as Google AdSense) may place cookies to serve personalized ads based on your visits to this and other websites.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">5. User Rights and Data Control</h2>
+      <p>
+        Since we do not store your documents, images, or signature files on our databases, we do not maintain files for deletion. All files you export remain on your local storage drive. You have complete control over your generated content. If you want to reset your saved editor preferences, simply clear your browser's site cookies and local storage cache.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">6. Changes to This Policy</h2>
+      <p>
+        We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date. We encourage you to review this policy periodically to stay informed about our data handling practices.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">7. Contact Us</h2>
+      <p>
+        If you have any questions or concerns regarding our privacy practices or client-side processing architecture, you can contact us through our <a href="/contact-us" class="text-link hover:underline">Contact Us</a> page or email us directly at <code>privacy@scribblecraft.com</code>.
+      </p>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

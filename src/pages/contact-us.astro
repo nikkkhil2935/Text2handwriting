@@ -1,0 +1,115 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const contactSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  'name': 'Contact Us - ScribbleCraft Text to Handwriting',
+  'description': 'Contact the ScribbleCraft support team. Fill out our contact form or send us an email directly for support queries.'
+};
+---
+
+<BaseLayout
+  title="Contact Us - Support & Feedback Queries"
+  description="Have questions or feedback about our text-to-handwriting tools or signature generators? Send us a message or contact our team directly."
+  activeTab="contact"
+  schema={contactSchema}
+>
+  <div class="max-w-2xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Contact Us</h1>
+      <p class="text-xs text-mute font-mono mt-1">We are here to help. Reach out with questions, bug reports, or feedback.</p>
+    </div>
+
+    <!-- Contact Form & Support Info -->
+    <div class="space-y-6 pt-4">
+      <div class="bg-canvas border border-hairline rounded-lg p-6 md:p-8 space-y-6 shadow-sm">
+        <h3 class="text-xs font-mono font-bold uppercase text-primary">Submit a Message</h3>
+
+        <form action="https://formspree.io/f/placeholder_id" method="POST" class="space-y-4 text-xs md:text-sm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label for="name" class="block font-mono font-bold text-primary text-[10px] uppercase">Your Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                required
+                placeholder="John Doe"
+                class="w-full px-3 py-2 border border-hairline rounded-md bg-canvas-soft text-primary focus:outline-none focus:border-mute transition-colors font-mono"
+              />
+            </div>
+            <div class="space-y-1">
+              <label for="email" class="block font-mono font-bold text-primary text-[10px] uppercase">Your Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="john@example.com"
+                class="w-full px-3 py-2 border border-hairline rounded-md bg-canvas-soft text-primary focus:outline-none focus:border-mute transition-colors font-mono"
+              />
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label for="subject" class="block font-mono font-bold text-primary text-[10px] uppercase">Subject</label>
+            <input
+              type="text"
+              id="subject"
+              name="subject"
+              required
+              placeholder="How can we help you?"
+              class="w-full px-3 py-2 border border-hairline rounded-md bg-canvas-soft text-primary focus:outline-none focus:border-mute transition-colors font-mono"
+            />
+          </div>
+
+          <div class="space-y-1">
+            <label for="message" class="block font-mono font-bold text-primary text-[10px] uppercase">Message</label>
+            <textarea
+              id="message"
+              name="message"
+              required
+              rows="5"
+              placeholder="Write your message here..."
+              class="w-full px-3 py-2 border border-hairline rounded-md bg-canvas-soft text-primary focus:outline-none focus:border-mute transition-colors resize-y min-h-[120px]"
+            ></textarea>
+          </div>
+
+          <div class="pt-2">
+            <button
+              type="submit"
+              class="px-5 py-2.5 rounded-full border border-hairline bg-primary hover:bg-canvas-soft text-on-primary hover:text-primary cursor-pointer transition-colors shadow-sm font-mono text-xs font-bold uppercase tracking-wider"
+            >
+              Send Message
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="border border-hairline p-5 rounded bg-canvas-soft space-y-2">
+          <h4 class="font-bold text-primary font-mono text-xs uppercase">Direct Email Support</h4>
+          <p class="text-xs text-body leading-relaxed">
+            Prefer direct email? Send your technical queries or custom handwriting requests to:
+          </p>
+          <p class="text-xs font-mono font-bold text-primary">
+            <code>support@scribblecraft.com</code>
+          </p>
+        </div>
+
+        <div class="border border-hairline p-5 rounded bg-canvas-soft space-y-2">
+          <h4 class="font-bold text-primary font-mono text-xs uppercase">Report an Issue</h4>
+          <p class="text-xs text-body leading-relaxed">
+            Encountered a bug with canvas rendering, table wiggles, or PDF exports? Fill out our form or mention the browser version you are using.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

@@ -64,11 +64,35 @@ self.onmessage = async function(e) {
     pageHeader = '',
     pageFooter = '',
     backgroundImageBitmap = null, // Custom paper background
-    dpiMultiplier = 1.0 // for high-res exports
+    dpiMultiplier = 1.0, // for high-res exports
+    elements = [],
+    isBold = false,
+    isItalic = false,
+    isUnderline = false,
+    customFonts = [] // array of { name, buffer }
   } = e.data;
 
   // 1. Ensure font is loaded
-  if (fontName && fontUrl) {
+  let fontLoaded = false;
+  if (customFonts && customFonts.length > 0) {
+    const customFont = customFonts.find(cf => cf.name === fontName);
+    if (customFont) {
+      try {
+        const cacheKey = `custom:${customFont.name}`;
+        if (!loadedFonts.has(cacheKey)) {
+          const font = new FontFace(customFont.name, customFont.buffer);
+          const loadedFont = await font.load();
+          self.fonts.add(loadedFont);
+          loadedFonts.add(cacheKey);
+        }
+        fontLoaded = true;
+      } catch (err) {
+        console.error(`Worker failed to load custom font ${customFont.name}:`, err);
+      }
+    }
+  }
+
+  if (!fontLoaded && fontName && fontUrl) {
     const ok = await loadFontInWorker(fontName, fontUrl);
     if (!ok) {
       self.postMessage({ type: 'error', message: `Font load failure: ${fontName}` });
@@ -92,10 +116,14 @@ self.onmessage = async function(e) {
   const wSpace = wordSpacing * scale;
   const lSpace = letterSpacing * scale;
 
+  const lineStep = paperStyle === 'plain'
+    ? (fSize * lineHeight)
+    : (gridSize * scale || 30 * scale);
+
   // Set up virtual canvas to measure text wrapping
   const measureCanvas = new OffscreenCanvas(100, 100);
   const measureCtx = measureCanvas.getContext('2d');
-  measureCtx.font = `${fSize}px "${fontName}"`;
+  measureCtx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fSize}px "${fontName}"`;
 
   // 2. Wrap text into lines & paginate
   const paragraphs = text.split('\n');
@@ -104,7 +132,7 @@ self.onmessage = async function(e) {
 
   const printableWidth = w - mLeft - mRight;
   const printableHeight = h - mTop - mBottom;
-  const maxLinesPerPage = Math.floor(printableHeight / lHeight);
+  const maxLinesPerPage = Math.floor(printableHeight / lineStep);
 
   // Pagination loop
   for (let i = 0; i < paragraphs.length; i++) {
@@ -223,10 +251,9 @@ self.onmessage = async function(e) {
     }
 
     // D. Render lines - align text baseline to paper lines
-    ctx.font = `${fSize}px "${fontName}"`;
+    ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fSize}px "${fontName}"`;
     ctx.textBaseline = 'alphabetic';
 
-    const lineStep = gridSize * scale || 30 * scale;
     const firstLineY = mTop + lineStep;
     let currentY = firstLineY;
 
@@ -288,6 +315,16 @@ self.onmessage = async function(e) {
           ctx.translate(drawX + wordMetrics.width / 2, drawY - fSize / 3);
           ctx.rotate(wordRot);
           ctx.fillText(word, -wordMetrics.width / 2, fSize / 3);
+          
+          if (isUnderline) {
+            ctx.beginPath();
+            ctx.moveTo(-wordMetrics.width / 2, fSize / 3 + 2 * scale);
+            ctx.lineTo(wordMetrics.width / 2, fSize / 3 + 2 * scale);
+            ctx.strokeStyle = inkColor;
+            ctx.lineWidth = 1.2 * scale;
+            ctx.stroke();
+          }
+
           ctx.restore();
 
           currentX += wordMetrics.width;
@@ -321,6 +358,16 @@ self.onmessage = async function(e) {
             ctx.translate(drawX + charMetrics.width / 2, drawY - fSize / 3);
             ctx.rotate(charRot);
             ctx.fillText(char, -charMetrics.width / 2, fSize / 3);
+            
+            if (isUnderline) {
+              ctx.beginPath();
+              ctx.moveTo(-charMetrics.width / 2, fSize / 3 + 2 * scale);
+              ctx.lineTo(charMetrics.width / 2, fSize / 3 + 2 * scale);
+              ctx.strokeStyle = inkColor;
+              ctx.lineWidth = 1.2 * scale;
+              ctx.stroke();
+            }
+
             ctx.restore();
 
             // Advance cursor
@@ -332,7 +379,43 @@ self.onmessage = async function(e) {
       currentY += lineStep;
     }
 
-    // E. Smudge/Grain filter overlay
+    // E. Draw Custom Elements (Images, Formulas, Tables, Sketches)
+    const pageElements = elements ? elements.filter(el => el.pageIndex === pageIdx) : [];
+
+    for (const el of pageElements) {
+      const elX = (el.x / 100) * w;
+      const elY = (el.y / 100) * h;
+      const elW = (el.width / 100) * w;
+      const elH = (el.height / 100) * h;
+
+      if (el.type === 'sketch' && el.strokes) {
+        ctx.save();
+        ctx.strokeStyle = inkColor;
+        ctx.lineWidth = 2 * scale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        applyInkType(ctx, inkType, 0.95);
+
+        for (const stroke of el.strokes) {
+          const sx = (stroke.x / 100) * w;
+          const sy = (stroke.y / 100) * h;
+          if (stroke.type === 'start') {
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+          } else if (stroke.type === 'move') {
+            ctx.lineTo(sx, sy);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      } else if (el.bitmap) {
+        ctx.save();
+        ctx.drawImage(el.bitmap, elX, elY, elW, elH);
+        ctx.restore();
+      }
+    }
+
+    // F. Smudge/Grain filter overlay
     if (realism.smudge) {
       applySmudgeFilter(ctx, w, h, rand, scale);
     }

@@ -39,7 +39,23 @@ const FONTS = [
   { name: 'Amita', category: 'cursive', family: 'Amita' },
   { name: 'Tillana', category: 'neat', family: 'Tillana' },
   { name: 'YatraOne', category: 'calligraphy', family: 'Yatra One' },
-  { name: 'Laila', category: 'neat', family: 'Laila' }
+  { name: 'Laila', category: 'neat', family: 'Laila' },
+
+  // Added requested realistic handwriting fonts
+  { name: 'HomemadeApple', category: 'cursive', family: 'Homemade Apple' },
+  { name: 'LiuJianMaoCao', category: 'cursive', family: 'Liu Jian Mao Cao' },
+  { name: 'JustAnotherHand', category: 'messy', family: 'Just Another Hand' },
+  { name: 'CedarvilleCursive', category: 'cursive', family: 'Cedarville Cursive' },
+  { name: 'DawningofaNewDay', category: 'messy', family: 'Dawning of a New Day' },
+  { name: 'Zeyada', category: 'messy', family: 'Zeyada' },
+  { name: 'LaBelleAurore', category: 'cursive', family: 'La Belle Aurore' },
+  { name: 'GloriaHallelujah', category: 'kids', family: 'Gloria Hallelujah' },
+  { name: 'LovedbytheKing', category: 'messy', family: 'Loved by the King' },
+  { name: 'BadScript', category: 'neat', family: 'Bad Script' },
+  { name: 'Mynerve', category: 'neat', family: 'Mynerve' },
+  { name: 'WaitingfortheSunrise', category: 'neat', family: 'Waiting for the Sunrise' },
+  { name: 'CoveredByYourGrace', category: 'neat', family: 'Covered By Your Grace' },
+  { name: 'ComingSoon', category: 'neat', family: 'Coming Soon' }
 ];
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
