@@ -13,10 +13,14 @@ interface Props {
   fullWidth?: boolean;
 }
 
+const siteUrl = 'https://texttohandwriting.me';
+const cleanPath = Astro.url.pathname.replace(/\/+$/, '');
+const finalCanonicalUrl = Astro.props.canonicalUrl || (cleanPath === '' ? `${siteUrl}/` : `${siteUrl}${cleanPath}`);
+
 const {
   title,
   description,
-  canonicalUrl = Astro.url.href,
+  canonicalUrl = finalCanonicalUrl,
   ogImage = '/og-image.png',
   ogType = 'website',
   schema,
@@ -31,7 +35,7 @@ const breadcrumbItems = urlPaths.map((path, idx) => ({
   '@type': 'ListItem',
   'position': idx + 1,
   'name': path.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-  'item': `${Astro.url.origin}/${urlPaths.slice(0, idx + 1).join('/')}`
+  'item': `${siteUrl}/${urlPaths.slice(0, idx + 1).join('/')}`
 }));
 
 const breadcrumbSchema = urlPaths.length > 0 ? {
@@ -80,14 +84,14 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:title" content={`${title} | Text to Handwriting`} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={new URL(ogImage, Astro.url.origin)} />
+    <meta property="og:image" content={new URL(ogImage, siteUrl)} />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content={canonicalUrl} />
     <meta property="twitter:title" content={`${title} | Text to Handwriting`} />
     <meta property="twitter:description" content={description} />
-    <meta property="twitter:image" content={new URL(ogImage, Astro.url.origin)} />
+    <meta property="twitter:image" content={new URL(ogImage, siteUrl)} />
 
     <!-- Structured Data (JSON-LD) -->
     {schema && (
