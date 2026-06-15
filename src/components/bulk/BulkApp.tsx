@@ -1,11 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, Plus, Upload, Trash2, Settings, Download, 
-  RefreshCw, Check, Info, FileSpreadsheet, Eye 
+import {
+  FileText, Plus, Upload, Trash2, Settings, Download,
+  RefreshCw, Check, Info, FileSpreadsheet, Eye
 } from 'lucide-react';
-import { FONTS } from '../../lib/fonts';
+import { FONTS, getDefaultBaselineOffset } from '../../lib/fonts';
 import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
 import JSZip from 'jszip';
+
+function Toast({ toast }: { toast: { message: string; isError?: boolean } | null }) {
+  if (!toast) return null;
+  return (
+    <div
+      className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg z-50 text-xs font-medium border flex items-center space-x-2 transition-all transform translate-y-0 ${toast.isError
+        ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-900 text-red-600 dark:text-red-300'
+        : 'bg-canvas border-hairline-strong text-primary'
+        }`}
+    >
+      <span className="w-1.5 h-1.5 bg-current rounded-full animate-ping"></span>
+      <span>{toast.message}</span>
+    </div>
+  );
+}
+
 
 interface DocumentItem {
   id: string;
@@ -23,11 +39,18 @@ interface DocumentItem {
 }
 
 export default function BulkApp() {
+  // Local toast helper for non-blocking UX (kept minimal; avoids alert interruption)
+  const [toast, setToast] = useState<{ message: string; isError?: boolean } | null>(null);
+
+  const showToast = (message: string, isError = false) => {
+    setToast({ message, isError });
+    setTimeout(() => setToast(null), 3000);
+  };
   const [docs, setDocs] = useState<DocumentItem[]>([
     { id: '1', title: 'Doc 01', text: 'Document one content for handwriting generation.', renderingStatus: 'idle' },
     { id: '2', title: 'Doc 02', text: 'Document two content. Customize your font settings.', renderingStatus: 'idle' }
   ]);
-  
+
   // Bulk paste text mode
   const [bulkPasteText, setBulkPasteText] = useState('');
   const [delimiter, setDelimiter] = useState('===');
@@ -42,10 +65,11 @@ export default function BulkApp() {
   const [globalLineHeight, setGlobalLineHeight] = useState(1.4);
   const [globalWordSpacing, setGlobalWordSpacing] = useState(0);
   const [globalLetterSpacing, setGlobalLetterSpacing] = useState(0);
-  
+
   const [globalMargins, setGlobalMargins] = useState({ top: 60, bottom: 60, left: 60, right: 60 });
   const [globalMessiness, setGlobalMessiness] = useState(0.8);
   const [globalSeed, setGlobalSeed] = useState(12345);
+  const [globalBaselineOffset, setGlobalBaselineOffset] = useState(4);
 
   // Queue system state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -74,6 +98,11 @@ export default function BulkApp() {
     }
   }, [docs]);
 
+  // Set default baseline offset when global font changes
+  useEffect(() => {
+    setGlobalBaselineOffset(getDefaultBaselineOffset(globalFont));
+  }, [globalFont]);
+
   // Clean active previews
   useEffect(() => {
     return () => {
@@ -84,14 +113,14 @@ export default function BulkApp() {
   // Show active preview
   const showPreview = (doc: DocumentItem) => {
     if (!doc.renderedPages || doc.renderedPages.length === 0) {
-      alert('This document has not been rendered yet. Click "Generate Handwriting" first.');
+      showToast('This document has not been rendered yet. Click "Generate Handwriting" first.', true);
       return;
     }
-    
+
     // Revoke old
     activeDocPreviewUrls.forEach(URL.revokeObjectURL);
     const urls = doc.renderedPages.map(buf => URL.createObjectURL(new Blob([buf], { type: 'image/png' })));
-    
+
     setActiveDocPreview(doc);
     setActiveDocPreviewUrls(urls);
     setPreviewPageIdx(0);
@@ -172,7 +201,7 @@ export default function BulkApp() {
           // clean quotes
           let cleanLine = line.replace(/^"(.*)"$/, '$1').trim();
           if (cleanLine.startsWith('title,text') || cleanLine.startsWith('"title"')) return null; // skip headers
-          
+
           let title = `CSV Row ${String(idx + 1).padStart(2, '0')}`;
           let text = cleanLine;
 
@@ -229,13 +258,41 @@ export default function BulkApp() {
     setIsProcessing(true);
     setCurrentProgress({ current: 0, total: docs.length });
 
+    // Pre-fetch all unique font buffers required for the batch
+    const fontBuffers: Record<string, ArrayBuffer> = {};
+    try {
+      const uniqueFontNames = new Set<string>();
+      docs.forEach(doc => {
+        uniqueFontNames.add(doc.overrideSettings?.fontFamily || globalFont);
+      });
+
+      showToast('Prefetching fonts for rendering...', false);
+      await Promise.all(
+        Array.from(uniqueFontNames).map(async (fontName) => {
+          const font = FONTS.find(f => f.family === fontName) || FONTS[0];
+          const res = await fetch(font.path);
+          if (!res.ok) throw new Error(`Failed to fetch font: ${fontName}`);
+          const buffer = await res.arrayBuffer();
+          fontBuffers[fontName] = buffer;
+        })
+      );
+    } catch (err) {
+      console.error('Failed to prefetch fonts:', err);
+      showToast('Failed to prefetch fonts', true);
+      setIsProcessing(false);
+      return;
+    }
+
     // Helper function to render a single document in worker
     const renderDoc = (doc: DocumentItem): Promise<ArrayBuffer[]> => {
       return new Promise((resolve, reject) => {
         const worker = new Worker('/workers/render.worker.js');
         const fontName = doc.overrideSettings?.fontFamily || globalFont;
         const font = FONTS.find(f => f.family === fontName) || FONTS[0];
-        
+        const docBaselineOffset = doc.overrideSettings?.fontFamily
+          ? getDefaultBaselineOffset(doc.overrideSettings.fontFamily)
+          : globalBaselineOffset;
+
         let paperWidth = 800;
         let paperHeight = 1130;
         if (exportPaperSize === 'letter') {
@@ -254,10 +311,16 @@ export default function BulkApp() {
           }
         };
 
+        const customFontsPayload = [];
+        if (fontBuffers[fontName]) {
+          customFontsPayload.push({ name: fontName, buffer: fontBuffers[fontName] });
+        }
+
         worker.postMessage({
           text: doc.text,
           fontName: font.family,
           fontUrl: font.path,
+          customFonts: customFontsPayload,
           paperStyle: doc.overrideSettings?.paperStyle || globalPaper,
           gridSize: 30,
           inkColor: doc.overrideSettings?.inkColor || globalInkColor,
@@ -280,7 +343,8 @@ export default function BulkApp() {
           },
           dpiMultiplier: parseFloat(exportDpi), // Use configuration quality
           paperWidth,
-          paperHeight
+          paperHeight,
+          baselineOffset: docBaselineOffset
         });
       });
     };
@@ -302,11 +366,11 @@ export default function BulkApp() {
 
       try {
         const buffers = await renderDoc(doc);
-        updatedDocs[i] = { 
-          ...doc, 
-          renderingStatus: 'done', 
+        updatedDocs[i] = {
+          ...doc,
+          renderingStatus: 'done',
           renderedPages: buffers,
-          pageCount: buffers.length 
+          pageCount: buffers.length
         };
       } catch (err) {
         console.error(err);
@@ -387,7 +451,7 @@ export default function BulkApp() {
     for (let docIdx = 0; docIdx < renderedDocs.length; docIdx++) {
       const doc = renderedDocs[docIdx];
       const docNum = String(docIdx + 1).padStart(docDigits, '0');
-      
+
       try {
         const pdfBytes = await createPdfFromImages(doc.renderedPages || [], exportPaperSize);
         const filename = `${filenamePrefix}-doc-${docNum}.pdf`;
@@ -427,7 +491,8 @@ export default function BulkApp() {
 
   return (
     <div className="space-y-6">
-      
+      <Toast toast={toast} />
+
       {/* Page Hero Title */}
       <div className="border-b border-hairline pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -444,13 +509,13 @@ export default function BulkApp() {
             onChange={handleFileUpload}
             className="hidden"
           />
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="btn-secondary text-xs flex items-center cursor-pointer shadow-sm"
           >
             <Upload size={14} className="mr-1.5" /> CSV/TXT Import
           </button>
-          <button 
+          <button
             onClick={() => setIsBulkPasteOpen(!isBulkPasteOpen)}
             className="btn-secondary text-xs flex items-center cursor-pointer shadow-sm"
           >
@@ -509,12 +574,12 @@ export default function BulkApp() {
 
       {/* Main Grid Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Left Column: Documents List & Override Editors */}
         <div className="lg:col-span-2 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-mute flex items-center justify-between">
             <span>Documents Pool ({docs.length})</span>
-            <button 
+            <button
               onClick={() => setDocs([])}
               className="text-red-500 hover:text-red-700 text-[10px] lowercase"
             >
@@ -529,17 +594,16 @@ export default function BulkApp() {
             </div>
           ) : (
             docs.map((doc, idx) => (
-              <div 
+              <div
                 key={doc.id}
-                className={`border rounded-lg bg-canvas p-4 shadow-sm flex flex-col gap-3 transition-colors ${
-                  doc.renderingStatus === 'rendering' 
-                    ? 'border-blue-500 ring-1 ring-blue-500' 
-                    : doc.renderingStatus === 'done' 
+                className={`border rounded-lg bg-canvas p-4 shadow-sm flex flex-col gap-3 transition-colors ${doc.renderingStatus === 'rendering'
+                  ? 'border-blue-500 ring-1 ring-blue-500'
+                  : doc.renderingStatus === 'done'
                     ? 'border-green-200 dark:border-green-900 bg-green-50/20'
                     : doc.renderingStatus === 'error'
-                    ? 'border-red-300'
-                    : 'border-hairline'
-                }`}
+                      ? 'border-red-300'
+                      : 'border-hairline'
+                  }`}
               >
                 {/* Header row */}
                 <div className="flex items-center justify-between gap-4">
@@ -551,7 +615,7 @@ export default function BulkApp() {
                       onChange={(e) => handleUpdateDocTitle(doc.id, e.target.value)}
                       className="text-xs font-semibold font-mono bg-transparent border-b border-transparent hover:border-hairline focus:border-hairline-strong outline-none py-0.5 px-1 max-w-[200px]"
                     />
-                    
+
                     {doc.renderingStatus === 'rendering' && (
                       <span className="text-[10px] font-mono text-blue-500 flex items-center space-x-1">
                         <RefreshCw size={10} className="animate-spin" />
@@ -661,7 +725,7 @@ export default function BulkApp() {
 
         {/* Right Column: Global Configurations & Rendering / Export Actions */}
         <div className="space-y-6">
-          
+
           {/* Global Configuration card */}
           <div className="border border-hairline bg-canvas rounded-lg p-5 shadow-sm space-y-4">
             <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-primary flex items-center pb-2 border-b border-hairline">
@@ -746,6 +810,18 @@ export default function BulkApp() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div>
+                <span>Line Offset (px)</span>
+                <input
+                  type="number"
+                  value={globalBaselineOffset}
+                  onChange={(e) => setGlobalBaselineOffset(parseInt(e.target.value) || 0)}
+                  className="input-field h-8 bg-canvas mt-1"
+                />
+              </div>
+            </div>
+
             <div className="border-t border-hairline pt-4 space-y-3">
               <button
                 onClick={handleGenerateAll}
@@ -794,7 +870,7 @@ export default function BulkApp() {
                   <option value="legal">Legal</option>
                 </select>
               </div>
-              
+
               <div>
                 <span>Export Quality</span>
                 <select

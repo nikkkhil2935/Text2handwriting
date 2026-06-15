@@ -2,95 +2,95 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Core Main Converter -->
   <url>
-    <loc>https://scribblecraft.com/</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <!-- Bulk Generator Queue -->
   <url>
-    <loc>https://scribblecraft.com/bulk-generator</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/bulk-generator</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <!-- Signature Generator -->
   <url>
-    <loc>https://scribblecraft.com/signature-generator</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/signature-generator</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <!-- Notebook Paper Generator -->
   <url>
-    <loc>https://scribblecraft.com/notebook-paper-generator</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/notebook-paper-generator</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <!-- Handwriting Font Preview -->
   <url>
-    <loc>https://scribblecraft.com/handwriting-font-preview</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/handwriting-font-preview</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <!-- Assignment Formatter -->
   <url>
-    <loc>https://scribblecraft.com/assignment-formatter</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/assignment-formatter</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <!-- FAQ Page -->
   <url>
-    <loc>https://scribblecraft.com/faq</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/faq</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <!-- Blog Index -->
   <url>
-    <loc>https://scribblecraft.com/blog</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/blog</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <!-- Blog Articles -->
   <url>
-    <loc>https://scribblecraft.com/blog/how-to-automate-100-pages-of-assignments</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/blog/how-to-automate-100-pages-of-assignments</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://scribblecraft.com/blog/best-handwriting-fonts-for-assignments</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/blog/best-handwriting-fonts-for-assignments</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <!-- Info & Legal Pages -->
   <url>
-    <loc>https://scribblecraft.com/about-us</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/about-us</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://scribblecraft.com/privacy-policy</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/privacy-policy</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://scribblecraft.com/terms-and-conditions</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/terms-and-conditions</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://scribblecraft.com/contact-us</loc>
-    <lastmod>2026-06-12</lastmod>
+    <loc>https://texttohandwriting.me/contact-us</loc>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

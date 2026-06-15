@@ -44,13 +44,23 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
 <!doctype html>
 <html lang="en" class="scroll-smooth">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-TEY89MX99W"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-TEY89MX99W');
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="Text " />
+    <meta name="apple-mobile-web-app-title" content="TextConvert" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="generator" content={Astro.generator} />
 
@@ -160,7 +170,7 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
         <a href="/contact-us" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Contact Us</a>
       </nav>
       <div class="mt-auto pt-6 border-t border-hairline text-center">
-        <p class="text-xs text-mute font-mono">scribblecraft.com</p>
+        <p class="text-xs text-mute font-mono">texttohandwriting.me</p>
       </div>
     </div>
 
@@ -181,7 +191,7 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
             The premium text-to-handwriting platform. Generate highly realistic handwritten notes, custom signatures, school assignments, and printable notebook papers dynamically with our OffscreenCanvas worker engine.
           </p>
           <p class="text-xs text-mute font-mono">
-            © {new Date().getFullYear()} scribblecraft.com
+            © {new Date().getFullYear()} texttohandwriting.me
           </p>
         </div>
         <div>

@@ -81,3 +81,51 @@ export function getFontsByCategory(category: string): FontItem[] {
 export function getFontByFamily(family: string): FontItem | undefined {
   return FONTS.find(f => f.family === family);
 }
+
+export function getDefaultBaselineOffset(family: string): number {
+  const offsets: Record<string, number> = {
+    'Architects Daughter': 4,
+    'Caveat': 3,
+    'Patrick Hand': 3,
+    'Indie Flower': 3,
+    'Kalam': 4,
+    'Dancing Script': 3,
+    'Pacifico': 1,
+    'Sacramento': 6,
+    'Yellowtail': 2,
+    'Great Vibes': 2,
+    'Reenie Beanie': 9,
+    'Nothing You Could Do': 3,
+    'Shadows Into Light': 4,
+    'Gochi Hand': 4,
+    'Pangolin': 3,
+    'Alex Brush': 2,
+    'Mr De Haviland': 2,
+    'Pinyon Script': 2,
+    'Playball': 2,
+    'Marck Script': 2,
+    'Amita': 3,
+    'Tillana': 3,
+    'Yatra One': 2,
+    'Laila': 3,
+    'Homemade Apple': 6,
+    'Liu Jian Mao Cao': 4,
+    'Just Another Hand': 8,
+    'Cedarville Cursive': 4,
+    'Dawning of a New Day': 7,
+    'Zeyada': 8,
+    'La Belle Aurore': 5,
+    'Gloria Hallelujah': 3,
+    'Loved by the King': 7,
+    'Bad Script': 3,
+    'Mynerve': 3,
+    'Waiting for the Sunrise': 4,
+    'Covered By Your Grace': 4,
+    'Coming Soon': 3,
+    'Itim': 2,
+    'Permanent Marker': 2,
+    'Caveat Brush': 3,
+    'Lacquer': 2
+  };
+  return offsets[family] !== undefined ? offsets[family] : 0;
+}

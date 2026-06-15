@@ -159,7 +159,8 @@ self.onmessage = async function(e) {
     isBold = false,
     isItalic = false,
     isUnderline = false,
-    customFonts = [] // array of { name, buffer }
+    customFonts = [], // array of { name, buffer }
+    baselineOffset = 4
   } = e.data;
 
   // 1. Ensure font is loaded
@@ -209,6 +210,8 @@ self.onmessage = async function(e) {
   const lineStep = paperStyle === 'plain'
     ? (fSize * lineHeight)
     : (gridSize * scale || 30 * scale);
+
+  const bOffset = (baselineOffset !== undefined ? baselineOffset : 4) * scale;
 
   // Set up virtual canvas to measure text wrapping
   const measureCanvas = new OffscreenCanvas(100, 100);
@@ -420,7 +423,7 @@ self.onmessage = async function(e) {
         if (leftFields[r]) {
           const field = leftFields[r];
           const textToDraw = field.value ? `${field.label}: ${field.value}` : `${field.label}: ____________________`;
-          ctx.fillText(textToDraw, mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale, currentY - 5 * scale);
+          ctx.fillText(textToDraw, mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale, currentY - 5 * scale + bOffset);
         }
 
         // Right Column Field
@@ -429,7 +432,7 @@ self.onmessage = async function(e) {
           const textToDraw = field.value ? `${field.label}: ${field.value}` : `${field.label}: _________`;
           ctx.save();
           ctx.textAlign = 'right';
-          ctx.fillText(textToDraw, w - mRight, currentY - 5 * scale);
+          ctx.fillText(textToDraw, w - mRight, currentY - 5 * scale + bOffset);
           ctx.restore();
         }
       }
@@ -550,7 +553,7 @@ self.onmessage = async function(e) {
             applyInkType(ctx, inkType, pressure);
 
             const drawX = currentX + hJitter;
-            const drawY = baselineY + vJitter + cumulativeDrift;
+            const drawY = baselineY + vJitter + cumulativeDrift + bOffset;
 
             ctx.translate(drawX + wordMetrics.width / 2, drawY - fSize / 3);
             ctx.rotate(wordRot);
@@ -585,7 +588,7 @@ self.onmessage = async function(e) {
               applyInkType(ctx, inkType, pressure);
 
               const drawX = currentX + hJitter;
-              const drawY = baselineY + vJitter + cumulativeDrift;
+              const drawY = baselineY + vJitter + cumulativeDrift + bOffset;
 
               ctx.translate(drawX + charMetrics.width / 2, drawY - fSize / 3);
               ctx.rotate(charRot);

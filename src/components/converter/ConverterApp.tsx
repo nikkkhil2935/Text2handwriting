@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Undo2, Redo2, Download, RefreshCw, Save, FolderOpen, 
-  Settings, Type, FileText, Sparkles, Sliders, Keyboard, 
-  Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2 
+import {
+  Undo2, Redo2, Download, RefreshCw, Save, FolderOpen,
+  Settings, Type, FileText, Sparkles, Sliders, Keyboard,
+  Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2
 } from 'lucide-react';
 import katex from 'katex';
 import * as htmlToImage from 'html-to-image';
-import { FONTS, CATEGORIES, getFontsByCategory } from '../../lib/fonts';
+import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset } from '../../lib/fonts';
 import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
 
 interface Preset {
@@ -144,7 +144,7 @@ const drawTableToDataUrl = (
     const padding = 10;
     const totalWidth = cellWidth * rows[0].length + padding * 2;
     const totalHeight = cellHeight * rows.length + padding * 2;
-    
+
     canvas.width = totalWidth * 2;
     canvas.height = totalHeight * 2;
     ctx.scale(2, 2);
@@ -153,7 +153,7 @@ const drawTableToDataUrl = (
     ctx.strokeStyle = inkColor;
     ctx.lineWidth = 1.5;
     ctx.fillStyle = inkColor;
-    
+
     const drawWobblyLine = (x1: number, y1: number, x2: number, y2: number) => {
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -224,11 +224,11 @@ const drawFormulaToDataUrl = async (
       throwOnError: false,
       displayMode: true
     });
-    
+
     await document.fonts.ready;
     // Wait for browser painting & font rendering
     await new Promise((resolve) => setTimeout(resolve, 100));
-    
+
     const dataUrl = await htmlToImage.toPng(container, {
       backgroundColor: 'transparent',
       style: {
@@ -261,7 +261,7 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
           strokes: el.strokes
         };
       }
-      
+
       if (!el.dataUrl) {
         return {
           id: el.id,
@@ -308,14 +308,14 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
   );
 };
 
-export default function ConverterApp({ 
-  defaultFont, 
+export default function ConverterApp({
+  defaultFont,
   defaultPaper,
   isAssignmentMode = false
-}: { 
-  defaultFont?: string; 
-  defaultPaper?: string; 
-  isAssignmentMode?: boolean 
+}: {
+  defaultFont?: string;
+  defaultPaper?: string;
+  isAssignmentMode?: boolean
 }) {
   // Config state
   const [text, setText] = useState(SAMPLE_TEXT);
@@ -329,17 +329,19 @@ export default function ConverterApp({
   const [wordSpacing, setWordSpacing] = useState(0);
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [alignment, setAlignment] = useState('left');
-  
+
   const [margins, setMargins] = useState({ top: 60, bottom: 60, left: 60, right: 60 });
   const [messiness, setMessiness] = useState(0.8);
   const [rotation, setRotation] = useState(2.0);
   const [vJitter, setVJitter] = useState(1.2);
   const [hJitter, setHJitter] = useState(0.6);
   const [baselineDrift, setBaselineDrift] = useState(0.8);
+  const [baselineOffset, setBaselineOffset] = useState(4);
+  const [fontBuffer, setFontBuffer] = useState<ArrayBuffer | null>(null);
   const [pressureVariation, setPressureVariation] = useState(0.12);
   const [smudge, setSmudge] = useState(false);
   const [seed, setSeed] = useState(12345);
-  
+
   const [headerLeft, setHeaderLeft] = useState('Name: ____________');
   const [headerCenter, setHeaderCenter] = useState('');
   const [headerRight, setHeaderRight] = useState('Date: ________');
@@ -360,18 +362,20 @@ export default function ConverterApp({
     { id: '2', label: 'Roll No', value: '', alignment: 'right' },
     { id: '3', label: 'Subject', value: '', alignment: 'left' },
     { id: '4', label: 'Class/Sec', value: '', alignment: 'right' },
-    { id: '5', label: 'Date', value: (() => {
-      const d = new Date();
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}-${month}-${year}`;
-    })(), alignment: 'left' }
+    {
+      id: '5', label: 'Date', value: (() => {
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+      })(), alignment: 'left'
+    }
   ]);
 
   // Left Margin Padding State
   const [lineMarginPadding, setLineMarginPadding] = useState(15);
-  
+
   // Custom paper background
   const [customBgBitmap, setCustomBgBitmap] = useState<ImageBitmap | null>(null);
   const [customBgName, setCustomBgName] = useState<string>('');
@@ -390,14 +394,14 @@ export default function ConverterApp({
   // Canvas elements state
   const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  
+
   // Sketching mode state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [currentSketchStrokes, setCurrentSketchStrokes] = useState<Array<{ x: number; y: number; type: 'start' | 'move' }>>([]);
-  
+
   // Formula dialog/input state
   const [latexInput, setLatexInput] = useState('\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}');
-  
+
   // Table input state
   const [tableRowsInput, setTableRowsInput] = useState(3);
   const [tableColsInput, setTableColsInput] = useState(3);
@@ -435,7 +439,7 @@ export default function ConverterApp({
       try {
         const buffer = event.target?.result as ArrayBuffer;
         const fontName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9\s-]/g, "");
-        
+
         // Register the font in the browser main thread
         const fontFace = new FontFace(fontName, buffer);
         const loadedFace = await fontFace.load();
@@ -458,13 +462,31 @@ export default function ConverterApp({
     reader.readAsArrayBuffer(file);
   };
 
-  // Preload selected fonts programmatically to ensure instant render
+  // Preload selected fonts programmatically and fetch buffer to ensure instant render in worker
   useEffect(() => {
-    if (fontFamily) {
-      document.fonts.load(`1em "${fontFamily}"`).then(() => {
-        triggerRender();
+    // 1. Reset baseline offset to font's default so it aligns on the line automatically
+    setBaselineOffset(getDefaultBaselineOffset(fontFamily));
+
+    const font = FONTS.find(f => f.family === fontFamily);
+    if (!font) return;
+
+    // 2. Load on main thread
+    document.fonts.load(`1em "${fontFamily}"`).then(() => {
+      triggerRender();
+    });
+
+    // 3. Prefetch for Web Worker
+    fetch(font.path)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch font');
+        return res.arrayBuffer();
+      })
+      .then(buffer => {
+        setFontBuffer(buffer);
+      })
+      .catch(err => {
+        console.error('Error prefetching font buffer:', err);
       });
-    }
   }, [fontFamily]);
 
   const workerRef = useRef<Worker | null>(null);
@@ -542,26 +564,26 @@ export default function ConverterApp({
   // Initialize Web Worker
   useEffect(() => {
     workerRef.current = new Worker('/workers/render.worker.js');
-    
+
     workerRef.current.onmessage = (e) => {
       const { type, pages: buffers, message } = e.data;
-      
+
       if (type === 'success') {
         // Revoke old object URLs after a short delay to let browser transition images smoothly
         const urlsToRevoke = [...pagesRef.current];
         setTimeout(() => {
           urlsToRevoke.forEach(URL.revokeObjectURL);
         }, 3000);
-        
-        const urls = buffers.map((buf: ArrayBuffer) => 
+
+        const urls = buffers.map((buf: ArrayBuffer) =>
           URL.createObjectURL(new Blob([buf], { type: 'image/png' }))
         );
-        
+
         setPages(urls);
         setPagesBuffers(buffers);
         setRendering(false);
         setError('');
-        
+
         setPreviewPageIdx(curr => curr >= urls.length ? 0 : curr);
       } else if (type === 'error') {
         setError(message || 'Failed to render canvas');
@@ -586,7 +608,7 @@ export default function ConverterApp({
       const font = FONTS.find(f => f.family === fontFamily);
       const fontName = fontFamily;
       const fontUrl = font ? font.path : '';
-      
+
       let paperWidth = 800;
       let paperHeight = 1130;
       if (exportPaper === 'letter') {
@@ -598,11 +620,18 @@ export default function ConverterApp({
       // Prepare overlay elements for worker
       const workerElements = await prepareElementsForWorker(canvasElements);
 
+      const customFontsPayload = [
+        ...customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer }))
+      ];
+      if (fontBuffer) {
+        customFontsPayload.push({ name: fontFamily, buffer: fontBuffer });
+      }
+
       const payload = {
         text,
         fontName,
         fontUrl,
-        customFonts: customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer })),
+        customFonts: customFontsPayload,
         paperStyle,
         gridSize,
         inkColor,
@@ -640,7 +669,8 @@ export default function ConverterApp({
         elements: workerElements,
         isBold,
         isItalic,
-        isUnderline
+        isUnderline,
+        baselineOffset
       };
 
       const transferList: Transferable[] = [];
@@ -662,22 +692,23 @@ export default function ConverterApp({
     wordSpacing, letterSpacing, alignment, margins, messiness, rotation, vJitter,
     hJitter, baselineDrift, pressureVariation, smudge, seed, headerLeft, headerCenter, headerRight, footerLeft, footerCenter, footerRight, sameHeaderAllPages,
     isAssignmentHeaderEnabled, assignmentFields, lineMarginPadding,
-    customBgBitmap, exportPaper, canvasElements, isBold, isItalic, isUnderline, customFonts
+    customBgBitmap, exportPaper, canvasElements, isBold, isItalic, isUnderline, customFonts,
+    baselineOffset, fontBuffer
   ]);
 
   // Handle text undo/redo history
   const handleTextChange = (val: string) => {
     setText(val);
-    
+
     // Add to history
     const nextHistory = history.slice(0, historyIndex + 1);
     nextHistory.push(val);
-    
+
     // Cap history length at 50
     if (nextHistory.length > 50) {
       nextHistory.shift();
     }
-    
+
     setHistory(nextHistory);
     setHistoryIndex(nextHistory.length - 1);
   };
@@ -702,7 +733,7 @@ export default function ConverterApp({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrl = e.ctrlKey || e.metaKey;
-      
+
       if (isCtrl && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         handleUndo();
@@ -747,7 +778,7 @@ export default function ConverterApp({
   // Save Preset
   const savePreset = () => {
     if (!newPresetName.trim()) return;
-    
+
     const presetObj: Preset = {
       name: newPresetName,
       fontName: fontFamily,
@@ -819,7 +850,7 @@ export default function ConverterApp({
       const font = FONTS.find(f => f.family === fontFamily);
       const fontName = fontFamily;
       const fontUrl = font ? font.path : '';
-      
+
       let paperWidth = 800;
       let paperHeight = 1130;
       if (exportPaper === 'letter') {
@@ -848,11 +879,18 @@ export default function ConverterApp({
         }
       });
 
+      const customFontsPayload = [
+        ...customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer }))
+      ];
+      if (fontBuffer) {
+        customFontsPayload.push({ name: fontFamily, buffer: fontBuffer });
+      }
+
       exportWorker.postMessage({
         text,
         fontName,
         fontUrl,
-        customFonts: customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer })),
+        customFonts: customFontsPayload,
         paperStyle,
         gridSize,
         inkColor,
@@ -890,7 +928,8 @@ export default function ConverterApp({
         elements: workerElements,
         isBold,
         isItalic,
-        isUnderline
+        isUnderline,
+        baselineOffset
       }, transferList);
     });
   };
@@ -900,7 +939,7 @@ export default function ConverterApp({
       showToast('Compiling ZIP of handwritten pages...');
       const dpi = parseFloat(exportDpi);
       const buffers = dpi === 1.0 ? pagesBuffers : await renderHighDpi(dpi);
-      
+
       const zipBlob = await createZipFromImages(buffers, 'handwritten-note');
       downloadBlob(zipBlob, 'handwritten-notes.zip');
       showToast('Downloaded ZIP successfully!');
@@ -929,7 +968,7 @@ export default function ConverterApp({
     e.preventDefault();
     e.stopPropagation();
     setSelectedElementId(el.id);
-    
+
     const startMouseX = e.clientX;
     const startMouseY = e.clientY;
     const startElX = el.x;
@@ -1021,7 +1060,7 @@ export default function ConverterApp({
 
   const handleSketchEnd = () => {
     if (currentSketchStrokes.length === 0) return;
-    
+
     const newElement: CanvasElement = {
       id: String(Date.now()),
       type: 'sketch',
@@ -1032,7 +1071,7 @@ export default function ConverterApp({
       height: 100,
       strokes: currentSketchStrokes
     };
-    
+
     setCanvasElements(prev => [...prev, newElement]);
     setCurrentSketchStrokes([]);
   };
@@ -1082,17 +1121,17 @@ export default function ConverterApp({
   useEffect(() => {
     const container = document.getElementById('preview-container');
     if (!container) return;
-    
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setScale(entry.contentRect.width / 800);
       }
     });
     observer.observe(container);
-    
+
     // Initial measurement
     setScale(container.getBoundingClientRect().width / 800);
-    
+
     return () => observer.disconnect();
   }, [editMode, paperStyle]);
 
@@ -1100,11 +1139,11 @@ export default function ConverterApp({
     if (paperStyle === 'plain') {
       return { backgroundColor: '#ffffff' };
     }
-    
+
     const scaledGridSize = gridSize * scale;
     const scaledLeftMargin = margins.left * scale;
     const scaledTopMargin = margins.top * scale;
-    
+
     if (paperStyle === 'single-ruled' || paperStyle === 'a4-notebook') {
       return {
         backgroundColor: '#ffffff',
@@ -1113,10 +1152,10 @@ export default function ConverterApp({
           repeating-linear-gradient(transparent, transparent ${scaledGridSize - 1}px, #e5e7eb ${scaledGridSize - 1}px, #e5e7eb ${scaledGridSize}px)
         `,
         backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
-        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+        backgroundPosition: `0 0, 0 ${scaledTopMargin - (baselineOffset * scale)}px`
       };
     }
-    
+
     if (paperStyle === 'legal') {
       return {
         backgroundColor: '#fdfbbe',
@@ -1125,10 +1164,10 @@ export default function ConverterApp({
           repeating-linear-gradient(transparent, transparent ${scaledGridSize - 1}px, #cbd5e1 ${scaledGridSize - 1}px, #cbd5e1 ${scaledGridSize}px)
         `,
         backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
-        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+        backgroundPosition: `0 0, 0 ${scaledTopMargin - (baselineOffset * scale)}px`
       };
     }
-    
+
     if (paperStyle === 'double-ruled') {
       const innerStep = scaledGridSize * 0.35;
       return {
@@ -1147,10 +1186,10 @@ export default function ConverterApp({
           )
         `,
         backgroundSize: `100% 100%, 100% ${scaledGridSize}px`,
-        backgroundPosition: `0 0, 0 ${scaledTopMargin}px`
+        backgroundPosition: `0 0, 0 ${scaledTopMargin - (baselineOffset * scale)}px`
       };
     }
-    
+
     if (paperStyle === 'graph') {
       return {
         backgroundColor: '#ffffff',
@@ -1161,7 +1200,7 @@ export default function ConverterApp({
         backgroundSize: `${scaledGridSize}px ${scaledGridSize}px`
       };
     }
-    
+
     if (paperStyle === 'dot-grid') {
       return {
         backgroundColor: '#ffffff',
@@ -1199,8 +1238,8 @@ export default function ConverterApp({
             top: `${el.y}%`,
             width: `${el.width}%`,
             height: `${el.height}%`,
-            border: selectedElementId === el.id 
-              ? '1.5px dashed #0070f3' 
+            border: selectedElementId === el.id
+              ? '1.5px dashed #0070f3'
               : isInteractive ? '1.5px dashed #cbd5e1' : 'none',
             backgroundColor: isInteractive ? 'rgba(255, 255, 255, 0.75)' : 'transparent',
             pointerEvents: isInteractive ? 'auto' : 'none',
@@ -1217,7 +1256,7 @@ export default function ConverterApp({
           {el.type === 'table' && el.dataUrl && (
             <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
           )}
-          
+
           {isInteractive && (
             <>
               {/* Drag Handle (top/center bar) */}
@@ -1238,7 +1277,7 @@ export default function ConverterApp({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCanvasElements(canvasElements.filter(item => item.id !== el.id));
+                  setCanvasElements(prev => prev.filter(item => item.id !== el.id));
                   setSelectedElementId(null);
                 }}
                 className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
@@ -1254,14 +1293,13 @@ export default function ConverterApp({
 
   return (
     <div className="w-full flex flex-col gap-4 relative min-h-[calc(100vh-100px)]">
-      
+
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg z-50 text-xs font-medium border flex items-center space-x-2 transition-all transform translate-y-0 ${
-          toast.isError 
-            ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-900 text-red-600 dark:text-red-300' 
-            : 'bg-canvas border-hairline-strong text-primary'
-        }`}>
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg z-50 text-xs font-medium border flex items-center space-x-2 transition-all transform translate-y-0 ${toast.isError
+          ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-900 text-red-600 dark:text-red-300'
+          : 'bg-canvas border-hairline-strong text-primary'
+          }`}>
           <span className="w-1.5 h-1.5 bg-current rounded-full animate-ping"></span>
           <span>{toast.message}</span>
         </div>
@@ -1270,7 +1308,7 @@ export default function ConverterApp({
       {/* Modern Formatting Toolbar */}
       <div className="w-full flex flex-wrap items-center justify-between gap-4 p-3 bg-canvas border border-hairline rounded-lg shadow-sm font-mono text-xs">
         <div className="flex flex-wrap items-center gap-4">
-          
+
           {/* Select Handwriting Font */}
           <div className="flex flex-col">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Handwriting Style</span>
@@ -1423,13 +1461,13 @@ export default function ConverterApp({
 
       {/* Main Workspace Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-stretch w-full">
-        
+
         {/* Left Column: Interactive A4 Paper (65%) */}
         <div className="w-full lg:w-[65%] flex flex-col items-center justify-start py-4 bg-canvas-soft border border-hairline rounded-lg shadow-sm min-h-[500px]">
-          
+
           {/* A4 Bounding Sheet Container */}
-          <div 
-            id="preview-container" 
+          <div
+            id="preview-container"
             className="relative w-full max-w-[480px] aspect-[800/1130] bg-white rounded border border-hairline shadow-md overflow-hidden select-none"
           >
             {editMode === 'edit' ? (
@@ -1437,7 +1475,7 @@ export default function ConverterApp({
               <div className="relative w-full h-full">
                 {/* Overlay standard headers if not assignment header */}
                 {!isAssignmentHeaderEnabled && (headerLeft || headerCenter || headerRight) && (
-                  <div 
+                  <div
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -1466,10 +1504,10 @@ export default function ConverterApp({
 
                 {/* Overlay Assignment Header */}
                 {isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0 && (
-                  <div 
+                  <div
                     style={{
                       position: 'absolute',
-                      top: `${margins.top * scale}px`,
+                      top: `${(margins.top - baselineOffset) * scale}px`,
                       left: 0,
                       width: '100%',
                       height: `${(Math.max(
@@ -1498,9 +1536,9 @@ export default function ConverterApp({
                       const rows = [];
                       for (let r = 0; r < maxRows; r++) {
                         rows.push(
-                          <div 
-                            key={r} 
-                            className="flex justify-between" 
+                          <div
+                            key={r}
+                            className="flex justify-between"
                             style={{ height: `${gridSize * scale}px`, lineHeight: `${gridSize * scale}px` }}
                           >
                             <span className="truncate">
@@ -1516,23 +1554,23 @@ export default function ConverterApp({
                     })()}
 
                     {/* Divider Line on the last ruled line */}
-                    <div 
-                      className="absolute left-0 right-0 border-t-2 border-double border-[#ff8a8a]" 
-                      style={{ 
+                    <div
+                      className="absolute left-0 right-0 border-t-2 border-double border-[#ff8a8a]"
+                      style={{
                         top: `${Math.max(
                           assignmentFields.filter(f => f.alignment === 'left').length,
                           assignmentFields.filter(f => f.alignment === 'right').length
                         ) * gridSize * scale}px`,
                         left: `${margins.left * scale}px`,
                         right: `${margins.right * scale}px`
-                      }} 
+                      }}
                     />
                   </div>
                 )}
 
                 {/* Overlay Footers */}
                 {(footerLeft || footerCenter || footerRight) && (
-                  <div 
+                  <div
                     style={{
                       position: 'absolute',
                       bottom: 0,
@@ -1570,7 +1608,7 @@ export default function ConverterApp({
                     top: 0,
                     width: '100%',
                     height: '100%',
-                    paddingTop: `${(margins.top + (isAssignmentHeaderEnabled ? (Math.max(
+                    paddingTop: `${(margins.top - baselineOffset + (isAssignmentHeaderEnabled ? (Math.max(
                       assignmentFields.filter(f => f.alignment === 'left').length,
                       assignmentFields.filter(f => f.alignment === 'right').length
                     ) + 1) * (gridSize || 30) : 0)) * scale}px`,
@@ -1623,7 +1661,7 @@ export default function ConverterApp({
                       className="w-full h-full object-contain"
                       draggable={false}
                     />
-                    
+
                     {/* Elements Overlay Layer (draggable/resizable on top of the preview) */}
                     <div className="absolute inset-0 top-0 left-0 w-full h-full pointer-events-auto">
                       {canvasElements
@@ -1655,7 +1693,7 @@ export default function ConverterApp({
                             {el.type === 'table' && el.dataUrl && (
                               <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
                             )}
-                            
+
                             {/* Drag Handle (top/center bar) */}
                             <div
                               className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors"
@@ -1674,7 +1712,7 @@ export default function ConverterApp({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setCanvasElements(canvasElements.filter(item => item.id !== el.id));
+                                setCanvasElements(prev => prev.filter(item => item.id !== el.id));
                                 setSelectedElementId(null);
                               }}
                               className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
@@ -1685,7 +1723,7 @@ export default function ConverterApp({
                           </div>
                         ))
                       }
-                      
+
                       {/* Drawing Canvas Overlays */}
                       {isDrawingMode && (
                         <div
@@ -1725,21 +1763,21 @@ export default function ConverterApp({
                             }
                             {currentSketchStrokes.length > 0 && (
                               <path
-                                  d={currentSketchStrokes.reduce((acc, pt) => {
-                                    if (pt.type === 'start') {
-                                      return `${acc} M ${pt.x}% ${pt.y}%`;
-                                    } else {
-                                      return `${acc} L ${pt.x}% ${pt.y}%`;
-                                    }
-                                  }, '')}
-                                  fill="none"
-                                  stroke={inkColor}
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  opacity="0.9"
-                                />
-                              )}
+                                d={currentSketchStrokes.reduce((acc, pt) => {
+                                  if (pt.type === 'start') {
+                                    return `${acc} M ${pt.x}% ${pt.y}%`;
+                                  } else {
+                                    return `${acc} L ${pt.x}% ${pt.y}%`;
+                                  }
+                                }, '')}
+                                fill="none"
+                                stroke={inkColor}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity="0.9"
+                              />
+                            )}
                           </svg>
                         </div>
                       )}
@@ -1756,7 +1794,7 @@ export default function ConverterApp({
 
           {/* Action Trigger Buttons & Page Indicators */}
           <div className="flex flex-col items-center gap-3 mt-4 w-full px-8">
-            
+
             {/* Generate Image Button */}
             <div className="flex gap-2 w-full max-w-[480px]">
               <button
@@ -1801,34 +1839,34 @@ export default function ConverterApp({
 
         {/* Right Column: Advanced Customization Sidebar (35%) */}
         <div className="w-full lg:w-[35%] flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm min-h-[500px]">
-          
+
           {/* Sidebar tabs */}
           <div className="grid grid-cols-5 gap-1 bg-canvas-soft-2 p-1 rounded-md text-[10px] font-mono mb-4 text-center">
-            <button 
+            <button
               onClick={() => setActivePanel('fonts')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'fonts' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Layout
             </button>
-            <button 
+            <button
               onClick={() => setActivePanel('realism')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'realism' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Realism
             </button>
-            <button 
+            <button
               onClick={() => setActivePanel('header')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'header' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Headers
             </button>
-            <button 
+            <button
               onClick={() => setActivePanel('insert')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Insert
             </button>
-            <button 
+            <button
               onClick={() => setActivePanel('paper')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'paper' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
@@ -1838,15 +1876,18 @@ export default function ConverterApp({
 
           {/* Active Sidebar Panels */}
           <div className="flex-grow overflow-y-auto space-y-6 text-xs text-body">
-            
+
             {/* Panel: Layout & Margins */}
             {activePanel === 'fonts' && (
               <div className="space-y-4">
-                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Layout & Spacing</h3>
-                
+                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Spacing Options</h3>
+
                 <div className="grid grid-cols-2 gap-3 font-mono">
                   <div>
-                    <span>Word Spacing</span>
+                    <div className="flex justify-between">
+                      <span>Word Spacing</span>
+                      <span>{wordSpacing}px</span>
+                    </div>
                     <input
                       type="range"
                       min="-5"
@@ -1857,7 +1898,10 @@ export default function ConverterApp({
                     />
                   </div>
                   <div>
-                    <span>Letter Spacing</span>
+                    <div className="flex justify-between">
+                      <span>Letter Spacing</span>
+                      <span>{letterSpacing}px</span>
+                    </div>
                     <input
                       type="range"
                       min="-5"
@@ -1896,6 +1940,22 @@ export default function ConverterApp({
                     max="60"
                     value={gridSize}
                     onChange={(e) => setGridSize(parseInt(e.target.value))}
+                    className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
+                  />
+                </div>
+
+                <div className="space-y-2 font-mono">
+                  <div className="flex justify-between">
+                    <span>Vertical Position</span>
+                    <span>{baselineOffset}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-20"
+                    max="20"
+                    step="1"
+                    value={baselineOffset}
+                    onChange={(e) => setBaselineOffset(parseInt(e.target.value))}
                     className="w-full accent-primary h-1 bg-hairline rounded-lg mt-1"
                   />
                 </div>
@@ -2046,7 +2106,7 @@ export default function ConverterApp({
                   </div>
                   <div className="flex items-center justify-between font-mono">
                     <span>Consistency Seed</span>
-                    <button 
+                    <button
                       onClick={() => setSeed(Math.floor(Math.random() * 100000))}
                       className="text-[10px] font-mono hover:underline text-link font-semibold cursor-pointer"
                     >
@@ -2061,7 +2121,7 @@ export default function ConverterApp({
             {activePanel === 'header' && (
               <div className="space-y-4">
                 <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Margins & Header Settings</h3>
-                
+
                 {isAssignmentMode && (
                   <div className="space-y-3 border-b border-hairline pb-3">
                     <div className="flex items-center justify-between">
@@ -2284,7 +2344,7 @@ export default function ConverterApp({
             {activePanel === 'insert' && (
               <div className="space-y-4">
                 <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Insert Media & Overlays</h3>
-                
+
                 <div>
                   <span className="block font-mono font-bold text-primary text-[10px] uppercase mb-1">Insert Image / Signature</span>
                   <input
@@ -2337,11 +2397,10 @@ export default function ConverterApp({
                       setIsDrawingMode(!isDrawingMode);
                       if (!isDrawingMode) setEditMode('preview');
                     }}
-                    className={`w-full h-7 text-[10px] font-mono rounded border flex items-center justify-center space-x-1 transition-colors cursor-pointer ${
-                      isDrawingMode 
-                        ? 'bg-link text-white border-link font-semibold animate-pulse' 
-                        : 'bg-canvas hover:bg-canvas-soft border-hairline text-body'
-                    }`}
+                    className={`w-full h-7 text-[10px] font-mono rounded border flex items-center justify-center space-x-1 transition-colors cursor-pointer ${isDrawingMode
+                      ? 'bg-link text-white border-link font-semibold animate-pulse'
+                      : 'bg-canvas hover:bg-canvas-soft border-hairline text-body'
+                      }`}
                   >
                     <span>{isDrawingMode ? 'Drawing Active (Click to Complete)' : 'Enable Sketch Drawing'}</span>
                   </button>
@@ -2360,8 +2419,8 @@ export default function ConverterApp({
                         onChange={(e) => {
                           const val = Math.max(1, parseInt(e.target.value) || 1);
                           setTableRowsInput(val);
-                          const newCells = Array(val).fill(null).map((_, rIdx) => 
-                            Array(tableColsInput).fill(null).map((_, cIdx) => 
+                          const newCells = Array(val).fill(null).map((_, rIdx) =>
+                            Array(tableColsInput).fill(null).map((_, cIdx) =>
                               (tableCells[rIdx]?.[cIdx] || '')
                             )
                           );
@@ -2380,8 +2439,8 @@ export default function ConverterApp({
                         onChange={(e) => {
                           const val = Math.max(1, parseInt(e.target.value) || 1);
                           setTableColsInput(val);
-                          const newCells = Array(tableRowsInput).fill(null).map((_, rIdx) => 
-                            Array(val).fill(null).map((_, cIdx) => 
+                          const newCells = Array(tableRowsInput).fill(null).map((_, rIdx) =>
+                            Array(val).fill(null).map((_, cIdx) =>
                               (tableCells[rIdx]?.[cIdx] || '')
                             )
                           );
@@ -2406,7 +2465,7 @@ export default function ConverterApp({
                               newCells[rIdx][cIdx] = e.target.value;
                               setTableCells(newCells);
                             }}
-                            placeholder={`R${rIdx+1}C${cIdx+1}`}
+                            placeholder={`R${rIdx + 1}C${cIdx + 1}`}
                             className="w-full border border-hairline bg-canvas p-1 rounded font-mono text-[8px] outline-none"
                           />
                         ))}
@@ -2445,13 +2504,13 @@ export default function ConverterApp({
             {activePanel === 'paper' && (
               <div className="space-y-4">
                 <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Presets & Page Backgrounds</h3>
-                
+
                 {paperStyle === 'custom' && (
                   <div className="border border-dashed border-hairline rounded-lg p-3 bg-canvas-soft-2/50 text-center space-y-2">
                     {customBgName ? (
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-mono text-body truncate">{customBgName}</p>
-                        <button 
+                        <button
                           onClick={() => { setCustomBgBitmap(null); if (customBgUrl) URL.revokeObjectURL(customBgUrl); setCustomBgUrl(''); setPaperStyle('plain'); }}
                           className="text-[10px] font-mono text-red-500 hover:underline flex items-center justify-center mx-auto"
                         >
@@ -2487,14 +2546,14 @@ export default function ConverterApp({
                   <div className="flex flex-wrap gap-1 max-h-[85px] overflow-y-auto">
                     {Object.keys(presets).map(name => (
                       <div key={name} className="group flex items-center bg-canvas-soft-2 text-[9px] font-mono px-2 py-0.5 rounded">
-                        <button 
+                        <button
                           onClick={() => applyPreset(presets[name])}
                           className="hover:text-primary mr-1 text-body font-medium cursor-pointer"
                         >
                           {name}
                         </button>
                         {!DEFAULT_PRESETS[name] && (
-                          <button 
+                          <button
                             onClick={() => deletePreset(name)}
                             className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer"
                           >

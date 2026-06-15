@@ -9,7 +9,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "astro build && node scripts/verify-build.js && wrangler pages deploy dist --branch main"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.7",
