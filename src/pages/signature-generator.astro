@@ -3,6 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import SignatureApp from '../components/signature/SignatureApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+const SIGNATURE_FAQS = [
+  {
+    q: 'How do I create a handwritten signature online free?',
+    a: 'Type your name or initials into the signature generator. It instantly renders your text in professional cursive script fonts. You can adjust the font, size, slant, and ink color, then download the signature as a transparent PNG or SVG file.'
+  },
+  {
+    q: 'Can I type my name and generate a signature?',
+    a: 'Yes! Switch to the "Type" mode, enter your full name or initials, and browse through multiple cursive signature fonts. The generator produces a polished signature image you can use on documents, invoices, and contracts.'
+  },
+  {
+    q: 'What makes a signature look realistic?',
+    a: 'A realistic signature has natural slant (5-10 degrees forward tilt), varied stroke thickness, slight baseline wobble, and ink color that matches real pen output. Our generator applies these variations automatically for authentic results.'
+  },
+  {
+    q: 'Is my signature data stored on your servers?',
+    a: 'No. The signature generator runs entirely in your browser using client-side JavaScript. Your typed text, drawn strokes, and exported images are never transmitted to any server. Your personal data stays completely private.'
+  },
+  {
+    q: 'What file formats can I download my signature in?',
+    a: 'You can download your signature as a transparent PNG (ideal for overlaying on documents) or as a vector SVG (ideal for scaling to any size without losing quality). Both formats are available for free.'
+  }
+];
+
 const signatureSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -16,88 +39,120 @@ const signatureSchema = {
     'priceCurrency': 'USD'
   }
 };
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': SIGNATURE_FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+
+const pageSchema = {
+  '@graph': [signatureSchema, faqSchema]
+};
 ---
 
 <BaseLayout 
-  title="Signature Generator - Free Online Signature Maker (PNG/SVG)"
-  description="Design custom handwritten signatures online. Type your initials to render cursive styles or draw a signature manually. Download transparent PNGs and SVGs instantly."
-  activeTab="home"
+  title="Signature Generator - Text to Handwriting"
+  description="Create handwritten signatures from text. Type your name, choose a cursive font, and download as PNG or SVG. Free, no sign-up required."
+  activeTab="signature"
   showHeroGradient={true}
   fullWidth={true}
-  schema={signatureSchema}
+  schema={pageSchema}
 >
   <div class="space-y-6">
     <AdSlot slotId="header-leaderboard" />
 
     <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
-      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Free Online Signature Generator</h1>
-      <p class="text-xs text-mute font-mono">Design professional handwritten signatures from text typing or draw freehand.</p>
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Signature Generator from Text</h1>
+      <p class="text-xs text-mute font-mono">Type your name to create a professional handwritten signature. Download as PNG or SVG instantly.</p>
     </div>
 
     <SignatureApp client:load />
 
-    <!-- Rich SEO Content Section (600+ Words) -->
+    <!-- Rich SEO Content Section -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">What is an Electronic Signature?</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Create Handwritten Signature Online Free</h2>
           <p>
-            An electronic signature (e-signature) is a digital representation of a person's handwritten signature used to authorize documents, sign PDFs, or verify contracts online. With businesses moving to digital document signing, having a clear, professional e-signature is essential.
+            An electronic signature is a digital representation of a person's handwritten signature used to authorize documents, sign PDFs, or verify contracts online. With businesses moving to digital document signing, having a clear, professional e-signature is essential.
           </p>
           <p>
-            Our free online signature generator provides two ways to create your electronic signature: typing your name to convert it into professional cursive styles using cursive script fonts, or drawing it freehand using your mouse or touch screen.
+            Our free <strong>signature generator from text</strong> provides two ways to create your electronic signature: typing your name to convert it into professional cursive styles, or drawing it freehand using your mouse or touch screen.
           </p>
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">How to Choose a Signature style</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Type Your Name and Generate a Signature</h2>
           <p>
             A good signature should be readable yet personalized. When designing your signature:
           </p>
           <ul class="list-disc pl-5 space-y-1">
-            <li><strong>Select the Right Font:</strong> Use flowing, flowing fonts like <em>Alex Brush</em>, <em>Mr De Haviland</em>, or <em>Pinyon Script</em>.</li>
+            <li><strong>Select the Right Font:</strong> Use flowing fonts like <em>Alex Brush</em>, <em>Mr De Haviland</em>, or <em>Pinyon Script</em>.</li>
             <li><strong>Adjust Ink Color:</strong> Blue and black remain the standard ink colors for legal documents and business correspondence.</li>
-            <li><strong>Control Slant:</strong> Add a forward tilt to your signature (around 5 to 10 degrees) to give it a dynamic, fluid appearance.</li>
+            <li><strong>Control Slant:</strong> Add a forward tilt (around 5 to 10 degrees) to give it a dynamic, fluid appearance.</li>
             <li><strong>Check Stroke Width:</strong> Ensure the pen thickness is visible and does not look blurry when resized on invoices or PDFs.</li>
           </ul>
         </div>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Drawing vs Typing Your Signature Online</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Realistic Signature Maker from Text</h2>
         <p>
           Both methods have unique advantages depending on your needs:
         </p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="border border-hairline p-4 rounded bg-canvas-soft">
-            <h4 class="font-bold text-primary mb-1">Method 1: Type to Signature</h4>
+            <h4 class="font-bold text-primary mb-1">Type to Signature</h4>
             <p class="text-xs">
               Type your initials or full name. The generator renders it instantly using specialized calligraphy and script fonts. You can adjust font size, angles, and color. This is ideal if you want a clean, legible signature without drawing.
             </p>
           </div>
           <div class="border border-hairline p-4 rounded bg-canvas-soft">
-            <h4 class="font-bold text-primary mb-1">Method 2: Draw to Signature</h4>
+            <h4 class="font-bold text-primary mb-1">Draw to Signature</h4>
             <p class="text-xs">
-              Use your finger, stylus, or cursor to write directly on the sketch canvas. This creates a completely unique signature vector. Recommended for authentic document signatures where visual replica of your real signature is needed.
+              Use your finger, stylus, or cursor to write directly on the sketch canvas. This creates a completely unique signature vector. Recommended for authentic document signatures where a visual replica of your real signature is needed.
             </p>
           </div>
         </div>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Is My Signature Safe on Your Server?</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Make a Signature Image for Documents</h2>
         <p>
-          Yes! We prioritize your security and privacy. Unlike other signature tools that upload your canvas images to their databases, **our signature maker runs completely client-side in your browser**. Your text inputs, uploads, and sketched strokes are never transmitted to any external server. The PNG and SVG export operations happen locally in your web browser, keeping your personal data completely private.
+          Our <strong>online cursive signature generator</strong> runs completely client-side in your browser. Your text inputs, uploads, and sketched strokes are never transmitted to any external server. The PNG and SVG export operations happen locally, keeping your personal data completely private.
+        </p>
+        <p>
+          Need handwritten text alongside your signature? Use the <a href="/" class="text-link hover:underline">text to handwriting converter</a> for full documents. For practice sheets, generate custom <a href="/notebook-paper-generator" class="text-link hover:underline">notebook paper</a>. Or convert entire documents in batches with the <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a>.
         </p>
       </div>
 
-      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
-        <h3 class="text-xs font-mono font-bold uppercase text-primary">Need Lined or Ruled Notebook Sheets?</h3>
-        <p class="text-xs">
-          If you need notebook papers or lined sheets to practice your handwriting, check out the <a href="/notebook-paper-generator" class="text-link hover:underline">ruled notebook paper maker</a>, format school assignments with the <a href="/assignment-formatter" class="text-link hover:underline">assignment formatter</a>, or convert large text files in batches using the <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a>.
-        </p>
+      <!-- FAQ Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {SIGNATURE_FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
       </div>
+
     </div>
 
     <AdSlot slotId="footer-leaderboard" />

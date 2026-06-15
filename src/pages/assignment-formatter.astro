@@ -3,6 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ConverterApp from '../components/converter/ConverterApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+const ASSIGNMENT_FAQS = [
+  {
+    q: 'How do I make a typed assignment look handwritten with name and date?',
+    a: 'Type your assignment content into the editor, then open the Headers panel. Enable the Assignment Cover Header and fill in your name, date, subject, and other fields. The tool renders these at the top of every page in handwriting style along with your main content.'
+  },
+  {
+    q: 'What is the best font for school assignment handwriting?',
+    a: 'For school assignments, we recommend Architects Daughter for a clean, legible print style. Kalam and Patrick Hand are also excellent choices. Avoid complex cursive fonts for academic work as teachers need to read your content easily.'
+  },
+  {
+    q: 'Can I add page numbers to my handwritten assignment?',
+    a: 'Yes! Open the Headers panel and configure the footer format. Use the pattern "Page {page} of {pages}" to automatically number every page. This keeps multi-page assignments organized and professional.'
+  },
+  {
+    q: 'How do I set up lined margin layouts for homework?',
+    a: 'Select the A4 Notebook Ruled paper preset, enable the red left margin line, and set your line spacing to match your font size (typically 30px for standard ruled sheets). The alignment ensures your text sits naturally on the guidelines.'
+  },
+  {
+    q: 'Can I download my handwritten assignment as a print-ready PDF?',
+    a: 'Yes. Set the export quality to 300 DPI (3x Quality) and select PDF as the format. This produces sharp, print-ready output that looks authentic when printed on real paper. Choose A4 or Letter size based on your school requirements.'
+  }
+];
+
 const assignmentSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -16,42 +39,59 @@ const assignmentSchema = {
     'priceCurrency': 'USD'
   }
 };
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': ASSIGNMENT_FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+
+const pageSchema = {
+  '@graph': [assignmentSchema, faqSchema]
+};
 ---
 
 <BaseLayout 
-  title="Assignment Handwriting Maker - Free Homework Page Formatter"
-  description="Convert your school homework and college assignments into realistic handwritten pages. Customize notebook lines, margin layouts, and download print-ready PDFs."
+  title="Assignment Handwriting Maker - Text to Handwriting"
+  description="Make typed assignments look handwritten with name and date. Free online tool with lined margins, header fields, and print-ready PDF export."
   activeTab="assignment"
   showHeroGradient={true}
   fullWidth={true}
-  schema={assignmentSchema}
+  schema={pageSchema}
 >
   <div class="space-y-6">
     <AdSlot slotId="header-leaderboard" />
 
     <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
-      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Assignment Handwriting Formatter</h1>
-      <p class="text-xs text-mute font-mono">Convert your homework text files into realistic, neat handwritten assignment sheets.</p>
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Assignment Handwriting Maker</h1>
+      <p class="text-xs text-mute font-mono">Convert your homework text files into realistic, neat handwritten assignment sheets with headers and dates.</p>
     </div>
 
     <ConverterApp client:load defaultFont="Architects Daughter" defaultPaper="a4-notebook" isAssignmentMode={true} />
 
-    <!-- Rich SEO Content Section (600+ Words) -->
+    <!-- Rich SEO Content Section -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Why Automate Homework Assignments?</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Make Typed Assignment Look Handwritten with Name and Date</h2>
           <p>
-            Students are frequently faced with the tedious chore of handwriting massive practical files, lab summaries, and homework sheets. Writing 50 to 100 pages manually is physically exhausting, time-consuming, and takes away time from actual learning or programming.
+            Students are frequently faced with the tedious chore of handwriting massive practical files, lab summaries, and homework sheets. Our <strong>assignment handwriting maker</strong> solves this by letting you type your content and rendering it as realistic handwriting — complete with name, date, and subject headers on every page.
           </p>
           <p>
-            Our assignment handwriting maker allows you to input typed document text and render it instantly as if written by hand. Choose standard neat school print fonts, customize margin guidelines, and download high-quality PDFs ready for submission.
+            Open the Headers panel, enable the Assignment Cover Header, and fill in your student details. The tool places these fields at the top margin of every page, exactly like how teachers expect handwritten assignments to be formatted.
           </p>
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Choosing the Best Fonts for School Homework</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Handwriting Generator for School Assignments</h2>
           <p>
             When creating assignment sheets, legibility for teachers represents the top priority. Avoid complex signature scripts and instead use neat handwriting variants:
           </p>
@@ -65,9 +105,9 @@ const assignmentSchema = {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">How to Set Up Perfect Lined Margin Layouts</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Fake Handwriting for Homework with Header Format</h2>
         <p>
-          To make your online assignment maker output look authentic, alignment to notebook rules is key:
+          To make your <strong>online tool to format handwritten homework</strong> output look authentic, alignment to notebook rules is key:
         </p>
         <ol class="list-decimal pl-5 space-y-1.5">
           <li><strong>Ruled Spacing:</strong> Set your paper background to <em>A4 Notebook Ruled</em> and adjust the line size to match your font size. Standard ruled sheets use 30px guidelines.</li>
@@ -78,18 +118,33 @@ const assignmentSchema = {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">High-Quality Printing Guidelines for Submissions</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Convert Essay to Handwritten Assignment Format</h2>
         <p>
-          When exporting your handwritten assignments, choose **Print 300DPI (3x Quality)**. Standard screen resolutions look pixelated when printed. High-resolution exports render smooth curves, sharp ruled lines, and realistic pen bleeding, making your printouts look completely authentic when printed on physical paper.
+          Paste your essay or report text into the editor. The system auto-paginates across multiple pages, applying consistent ruled lines and margins. For the best print results, export at <strong>300 DPI (3x Quality)</strong>. This produces sharp curves, smooth ink blending, and authentic-looking output on physical paper.
+        </p>
+        <p>
+          For converting essays in bulk, use the <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a>. To preview available handwriting fonts, visit the <a href="/handwriting-font-preview" class="text-link hover:underline">font preview page</a>. Need a custom signature for your assignment? Try the <a href="/signature-generator" class="text-link hover:underline">signature generator</a>.
         </p>
       </div>
 
-      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
-        <h3 class="text-xs font-mono font-bold uppercase text-primary">Need Bulk Generation for Large Assignment Batches?</h3>
-        <p class="text-xs">
-          If you have multiple documents or a 100-page assignment run, use the <a href="/bulk-generator" class="text-link hover:underline">bulk generator tool</a>. It uses parallel workers to process files in a queue. You can also generate signatures with the <a href="/signature-generator" class="text-link hover:underline">signature generator</a>, or view all script styles in the <a href="/handwriting-font-preview" class="text-link hover:underline">font catalog</a>.
-        </p>
+      <!-- FAQ Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {ASSIGNMENT_FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
       </div>
+
     </div>
 
     <AdSlot slotId="footer-leaderboard" />

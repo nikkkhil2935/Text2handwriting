@@ -3,6 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PaperApp from '../components/paper/PaperApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+const PAPER_FAQS = [
+  {
+    q: 'How do I create custom graph paper online?',
+    a: 'Select the "Graph Grid" paper style in the generator, then adjust the grid size (small squares for fine detail, larger squares for engineering). Customize line color, spacing, and margins, then download as a printable PDF.'
+  },
+  {
+    q: 'Is the printable ruled paper generator free?',
+    a: 'Yes! The notebook paper generator is completely free. You can create unlimited lined, graph, dot-grid, and legal pad papers. Download as many pages as you need in PDF format at no cost.'
+  },
+  {
+    q: 'Can I use these papers for handwriting practice?',
+    a: 'Absolutely. The double-ruled paper style is specifically designed for handwriting practice. It provides top and bottom guidelines that help kids and adults practice letter formation, height consistency, and spacing.'
+  },
+  {
+    q: 'What paper sizes are supported?',
+    a: 'The generator supports A4 (210x297mm), US Letter (8.5x11in), and Legal (8.5x14in). Choose the size that matches your printer or regional standard. All templates are optimized for clean printing without layout cuts.'
+  },
+  {
+    q: 'Can I customize the line color and spacing?',
+    a: 'Yes. You can change line color (blue, black, gray, or custom hex), adjust spacing between lines, modify left/right margins, and toggle features like red margin lines. This lets you match any notebook standard or personal preference.'
+  }
+];
+
 const paperSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -16,34 +39,51 @@ const paperSchema = {
     'priceCurrency': 'USD'
   }
 };
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': PAPER_FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+
+const pageSchema = {
+  '@graph': [paperSchema, faqSchema]
+};
 ---
 
 <BaseLayout 
-  title="Ruled Notebook Paper Generator - Free Printable Grid & Lined Sheets"
-  description="Generate custom printable notebook papers online. Build lined worksheets, graph grid paper, dot-grid templates, and legal pads. Download as multi-page ZIP files."
-  activeTab="home"
+  title="Notebook Paper Generator - Text to Handwriting"
+  description="Generate free printable notebook paper online. Create ruled, graph, dot-grid, and legal pad templates. Download as multi-page PDF instantly."
+  activeTab="notebook"
   showHeroGradient={true}
   fullWidth={true}
-  schema={paperSchema}
+  schema={pageSchema}
 >
   <div class="space-y-6">
     <AdSlot slotId="header-leaderboard" />
 
     <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
-      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Ruled Notebook Paper Generator</h1>
+      <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-primary uppercase font-mono">Notebook Paper Generator Online</h1>
       <p class="text-xs text-mute font-mono">Create and download printable lined paper, graph grid paper, legal pads, and dot grids.</p>
     </div>
 
     <PaperApp client:load />
 
-    <!-- Rich SEO Content Section (600+ Words) -->
+    <!-- Rich SEO Content Section -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Why Use an Online Paper Generator?</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Printable Ruled Paper Generator Free</h2>
           <p>
-            Lined notebook sheets and graph paper represent fundamental resources for student assignments, design drafts, and handwriting practice. Instead of buying physical notebooks, an online paper maker allows you to generate custom ruled paper sheets instantly.
+            Lined notebook sheets and graph paper represent fundamental resources for student assignments, design drafts, and handwriting practice. Instead of buying physical notebooks, our <strong>notebook paper generator online</strong> allows you to generate custom ruled paper sheets instantly.
           </p>
           <p>
             You can configure the exact grid size, line spacing, border margins, and ink color. Whether you need standard college ruled notebook paper, graph sheets for engineering equations, or dot grids for bullet journaling, our generator builds clean, pixel-perfect templates ready to print.
@@ -51,7 +91,7 @@ const paperSchema = {
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Types of Printable Paper Styles Available</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Create Custom Graph Paper Online</h2>
           <p>
             Our tool supports several popular paper styles suited for educational and drafting tasks:
           </p>
@@ -66,7 +106,7 @@ const paperSchema = {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Standard Paper Dimensions & Print Settings</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Notebook Page Background for Handwriting</h2>
         <p>
           To print the generated papers correctly without layout cuts or sizing issues, ensure your print dimensions match the paper settings:
         </p>
@@ -93,21 +133,33 @@ const paperSchema = {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Customizing Your Lined Papers for Handwriting</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Dot Grid Paper Generator Printable</h2>
         <p>
-          For optimal results when writing, match your lines to your writing size:
+          For optimal results when writing, match your lines to your writing size. If you have large print, choose a wider grid spacing (around 30px to 40px). For micro-text or coding drafts, scale down the grid size to 15px-20px. Adjust the margin offset so that when the sheets are punched or bound, your handwritten text remains perfectly aligned.
         </p>
         <p>
-          If you have large print, choose a wider grid spacing (around 30px to 40px). For micro-text or coding drafts, scale down the grid size to 15px-20px. Adjust the margin offset (left, top, right, bottom) so that when the sheets are punched or bound into folders, your handwritten text remains perfectly aligned and margins are not hidden.
+          Once you have your paper, convert text onto it using the <a href="/" class="text-link hover:underline">text to handwriting converter</a>. Preview available handwriting styles on the <a href="/handwriting-font-preview" class="text-link hover:underline">font preview page</a>. For cursive text, try the <a href="/text-to-cursive" class="text-link hover:underline">text to cursive converter</a>.
         </p>
       </div>
 
-      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
-        <h3 class="text-xs font-mono font-bold uppercase text-primary">Need Handwriting Font Preview?</h3>
-        <p class="text-xs">
-          Want to see how your text will look on these papers? Use our <a href="/handwriting-font-preview" class="text-link hover:underline">font preview playground</a> to inspect 15+ handwriting variants, or convert your digital text blocks directly onto these pages using the <a href="/" class="text-link hover:underline">handwriting text converter</a>.
-        </p>
+      <!-- FAQ Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {PAPER_FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
       </div>
+
     </div>
 
     <AdSlot slotId="footer-leaderboard" />

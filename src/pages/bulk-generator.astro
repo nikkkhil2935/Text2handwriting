@@ -3,6 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import BulkApp from '../components/bulk/BulkApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+const BULK_FAQS = [
+  {
+    q: 'How do I generate multiple handwritten pages at once?',
+    a: 'Paste your text into the bulk generator separated by delimiters (=== or ---page break---), or upload a CSV file where each row contains a document block. Click "Run Batch" and the tool processes all documents in parallel using Web Workers. Download the results as a ZIP of images or a combined PDF.'
+  },
+  {
+    q: 'Can I convert long notes to handwriting PDF in bulk?',
+    a: 'Yes! The bulk generator is designed for large volumes. Upload your long notes as a text file or paste them with page break delimiters. The system auto-paginates each document and compiles them into a single multi-page PDF at 300 DPI print quality.'
+  },
+  {
+    q: 'Is there a batch handwriting generator for teachers?',
+    a: 'Absolutely. Teachers use the bulk generator to create handwritten worksheets, assignment templates, and practice sheets for entire classes. You can apply consistent font, paper, and margin settings across all documents in the batch.'
+  },
+  {
+    q: 'What file formats can I upload for bulk conversion?',
+    a: 'You can paste plain text with delimiters, upload CSV files where each row is a document, or load .txt files directly. The tool processes all formats and renders them into handwriting using your chosen font and paper settings.'
+  },
+  {
+    q: 'How many pages can I generate at once?',
+    a: 'There is no hard limit. The bulk generator uses browser Web Workers to process documents in the background, keeping your tab responsive. For best results with batches over 50 pages, we recommend using a modern browser like Chrome or Edge.'
+  }
+];
+
 const bulkSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -16,23 +39,108 @@ const bulkSchema = {
     'priceCurrency': 'USD'
   }
 };
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': BULK_FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+
+const pageSchema = {
+  '@graph': [bulkSchema, faqSchema]
+};
 ---
 
 <BaseLayout 
-  title="Bulk Handwriting Generator - Create Multiple Handwritten Pages in Parallel"
-  description="Upload CSV sheets or paste text chunks with delimiters to auto-convert multiple documents into handwriting sequentially. Includes queue indicators, overrides, and ZIP/PDF downloads."
+  title="Bulk Handwriting Generator - Text to Handwriting"
+  description="Generate multiple handwritten pages at once from text or CSV. Free bulk handwriting tool for teachers and students. Export as PDF or ZIP."
   activeTab="bulk"
   showHeroGradient={true}
   fullWidth={true}
-  schema={bulkSchema}
+  schema={pageSchema}
 >
   <div class="space-y-6">
     <!-- Ad Slot: Below header -->
     <AdSlot slotId="header-leaderboard" />
 
+    <div class="max-w-4xl mx-auto text-center space-y-2 mb-4">
+      <p class="text-xs text-mute font-mono">Generate multiple handwritten pages at once from text, CSV, or text files. Export as PDF or ZIP.</p>
+    </div>
+
     <BulkApp client:load />
 
-    <!-- Ad Slot: Above footer -->
+    <!-- Rich SEO Content Section -->
+    <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Generate Multiple Handwritten Pages at Once Online</h2>
+          <p>
+            Writing 50 or 100 pages of assignments by hand takes days of effort. Our <strong>bulk handwriting generator for multiple pages</strong> eliminates that workload entirely. Paste your documents separated by delimiters, upload a CSV spreadsheet, or load text files — and the tool converts every block into realistic handwritten pages in one batch.
+          </p>
+          <p>
+            Whether you are a student facing a massive assignment deadline or a teacher creating worksheets for an entire class, the bulk generator handles volumes that would be impossible to process manually.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-base font-semibold text-primary font-mono">Convert Long Notes to Handwriting PDF in Bulk</h2>
+          <p>
+            The most common use case is converting long notes to handwriting PDF in bulk. Students paste entire chapters, lab records, or project reports into the generator. The system automatically paginates the content across multiple A4 or Letter sheets, applies consistent margins and ruled lines, and compiles everything into a single downloadable PDF.
+          </p>
+          <p>
+            For assignments that require headers with name, date, and subject on every page, use the <a href="/assignment-formatter" class="text-link hover:underline">assignment formatter</a> which pre-configures these fields automatically.
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Create Multiple Handwritten Assignments Automatically</h2>
+        <p>
+          Teachers and tutors use the <strong>batch handwriting generator for teachers</strong> to create personalized assignment sheets for each student. Upload a CSV with student names and their assignment topics, and the generator produces individualized handwritten pages with the correct headers.
+        </p>
+        <p>
+          The bulk system uses browser Web Workers to process documents in parallel, keeping your browser tab responsive even during large batches. Track progress on the queue indicators and download your compiled files as structured ZIP archives or combined multi-page PDFs.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Bulk Convert Text Files to Handwritten Images</h2>
+        <p>
+          Need handwritten images instead of PDFs? The <strong>bulk convert text files to handwritten images</strong> option exports each page as a high-resolution PNG at 300 DPI. These images can be inserted into documents, uploaded to submission portals, or printed directly.
+        </p>
+        <p>
+          For single-document conversion, use the <a href="/" class="text-link hover:underline">text to handwriting converter</a>. For cursive-style output, try the <a href="/text-to-cursive" class="text-link hover:underline">text to cursive converter</a>. Preview all available fonts on the <a href="/handwriting-font-preview" class="text-link hover:underline">font preview page</a> before choosing your batch settings.
+        </p>
+      </div>
+
+      <!-- FAQ Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {BULK_FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+    </div>
+
     <AdSlot slotId="footer-leaderboard" />
   </div>
 </BaseLayout>

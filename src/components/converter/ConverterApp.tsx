@@ -1248,13 +1248,13 @@ export default function ConverterApp({
           className="group"
         >
           {el.type === 'image' && el.dataUrl && (
-            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+            <img src={el.dataUrl} alt="Canvas image element" className="w-full h-full object-contain pointer-events-none" />
           )}
           {el.type === 'formula' && el.dataUrl && (
-            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+            <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
           )}
           {el.type === 'table' && el.dataUrl && (
-            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+            <img src={el.dataUrl} alt="Canvas table element" className="w-full h-full object-contain pointer-events-none" />
           )}
 
           {isInteractive && (
@@ -1701,13 +1701,13 @@ export default function ConverterApp({
                           >
                             {/* Render content */}
                             {el.type === 'image' && el.dataUrl && (
-                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                              <img src={el.dataUrl} alt="Canvas image element" className="w-full h-full object-contain pointer-events-none" />
                             )}
                             {el.type === 'formula' && el.dataUrl && (
-                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                              <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
                             )}
                             {el.type === 'table' && el.dataUrl && (
-                              <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+                              <img src={el.dataUrl} alt="Canvas table element" className="w-full h-full object-contain pointer-events-none" />
                             )}
 
                             {/* Drag Handle (top/center bar) */}

@@ -195,6 +195,31 @@ function verifyHtmlFile(filePath) {
   }
 }
 
+// Clean up sitemap files by merging/renaming Astro's split files into a single sitemap.xml
+function cleanupSitemaps() {
+  console.log(`\n${BOLD}=== Cleaning up Sitemaps ===${RESET}`);
+  const sitemapIndex = path.join(DIST_DIR, 'sitemap-index.xml');
+  const sitemap0 = path.join(DIST_DIR, 'sitemap-0.xml');
+  const sitemapTarget = path.join(DIST_DIR, 'sitemap.xml');
+
+  if (fs.existsSync(sitemap0)) {
+    try {
+      fs.copyFileSync(sitemap0, sitemapTarget);
+      logSuccess(`Created unified sitemap.xml from sitemap-0.xml.`);
+      
+      fs.unlinkSync(sitemap0);
+      if (fs.existsSync(sitemapIndex)) {
+        fs.unlinkSync(sitemapIndex);
+      }
+      logSuccess(`Cleaned up sitemap-index.xml and sitemap-0.xml.`);
+    } catch (err) {
+      logError(`Failed to cleanup sitemaps: ${err.message}`);
+    }
+  } else {
+    logWarning(`sitemap-0.xml not found at ${sitemap0}. Sitemap unification skipped.`);
+  }
+}
+
 function main() {
   console.log(`\n${BOLD}=== Astro Build Verification & SEO Audit ===${RESET}`);
   
@@ -202,6 +227,9 @@ function main() {
     console.error(`${RED}dist/ directory not found! Run npm run build first.${RESET}`);
     process.exit(1);
   }
+
+  // Perform sitemap cleanup before checking other pages
+  cleanupSitemaps();
 
   const allFiles = getFilesRecursively(DIST_DIR);
   const htmlFiles = allFiles.filter(f => f.endsWith('.html'));

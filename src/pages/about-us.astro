@@ -5,11 +5,11 @@ import AdSlot from '../components/common/AdSlot.astro';
 const aboutSchema = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
-  'name': 'About Us - ScribbleCraft Text to Handwriting',
-  'description': 'Learn about the history and mission of ScribbleCraft, the leading realistic text-to-handwriting platform for students, educators, and creative professionals.',
+  'name': 'About Us - Text to Handwriting',
+  'description': 'Learn about the history and mission of Text to Handwriting, the leading realistic text-to-handwriting platform for students, educators, and creative professionals.',
   'publisher': {
     '@type': 'Organization',
-    'name': 'ScribbleCraft',
+    'name': 'Text to Handwriting',
     'logo': {
       '@type': 'ImageObject',
       'url': 'https://texttohandwriting.me/favicon.svg'
@@ -19,8 +19,8 @@ const aboutSchema = {
 ---
 
 <BaseLayout
-  title="About Us - Our Mission & Story"
-  description="Discover the story behind ScribbleCraft, our advanced browser-based handwriting engine, and how we help students, teachers, and creators make realistic handwriting pages."
+  title="About Us - Our Mission - Text to Handwriting"
+  description="Discover the story behind Text to Handwriting, our advanced browser-based engine, and how we help creators make realistic handwritten pages."
   activeTab="about"
   schema={aboutSchema}
 >
@@ -28,14 +28,14 @@ const aboutSchema = {
     <AdSlot slotId="header-leaderboard" />
 
     <div class="border-b border-hairline pb-4 text-center">
-      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">About ScribbleCraft</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">About Text to Handwriting</h1>
       <p class="text-xs text-mute font-mono mt-1">Our mission to bridge digital productivity and handwritten charm.</p>
     </div>
 
     <div class="space-y-6 text-xs md:text-sm text-body leading-relaxed">
       <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Our Origin Story</h2>
       <p>
-        ScribbleCraft was founded with a simple observation: in an increasingly paperless world, the warmth, authenticity, and personal connection of handwriting are being lost. Students spend hours transcribing assignments, teachers struggle to generate engaging handwriting practice sheets, and creators search for custom cursive letters.
+        Text to Handwriting was founded with a simple observation: in an increasingly paperless world, the warmth, authenticity, and personal connection of handwriting are being lost. Students spend hours transcribing assignments, teachers struggle to generate engaging handwriting practice sheets, and creators search for custom cursive letters.
       </p>
       <p>
         To solve this, we designed a browser-based handwriting generator that compiles digital text into authentic handwritten pages. By utilizing modern web technologies like the HTML5 Canvas API and Web Workers, we build handwriting pages with per-character slants, ink bleed simulations, and graphite textures.
@@ -65,13 +65,13 @@ const aboutSchema = {
 
       <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Privacy-First Architecture</h2>
       <p>
-        Unlike many modern SaaS platforms, ScribbleCraft is engineered with absolute respect for user data privacy. **We do not upload your text, sketches, formulas, or images to our servers**. 
+        Unlike many modern SaaS platforms, Text to Handwriting is engineered with absolute respect for user data privacy. **We do not upload your text, sketches, formulas, or images to our servers**. 
       </p>
       <p>
-        The entire rendering workflow runs locally inside your browser via client-side JavaScript, Canvas drawing, and background Web Workers. Your documents, signatures, and personal notes remain entirely on your device, making ScribbleCraft a safe and secure choice for students, educators, and businesses alike.
+        The entire rendering workflow runs locally inside your browser via client-side JavaScript, Canvas drawing, and background Web Workers. Your documents, signatures, and personal notes remain entirely on your device, making Text to Handwriting a safe and secure choice for students, educators, and businesses alike.
       </p>
 
-      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Explore ScribbleCraft</h2>
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">Explore Text to Handwriting</h2>
       <p>
         Ready to make your first document? Check out our range of handwriting and design tools:
       </p>

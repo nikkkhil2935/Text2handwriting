@@ -3,6 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import FontPreviewApp from '../components/fonts/FontPreviewApp';
 import AdSlot from '../components/common/AdSlot.astro';
 
+const FONT_FAQS = [
+  {
+    q: 'What are the best handwriting fonts for assignments?',
+    a: 'For school assignments, we recommend Architects Daughter for clean legibility, Kalam for a neat Indian handwriting style, and Patrick Hand for a natural rounded look. These fonts are highly readable and match classical notebook aesthetics.'
+  },
+  {
+    q: 'Can I preview handwriting fonts with my own custom text?',
+    a: 'Yes! The font preview tool lets you type any text and renders it across all 20+ handwriting fonts simultaneously. You can compare styles side by side and find the one that matches your preferred neatness, slant, and flow.'
+  },
+  {
+    q: 'What is the difference between cursive and print handwriting fonts?',
+    a: 'Print fonts produce separate, legible letters ideal for school assignments. Cursive fonts create flowing, connected script better suited for letters, invitations, and signatures. The font preview page lets you compare both styles side by side.'
+  },
+  {
+    q: 'Are the handwriting fonts free to use?',
+    a: 'Yes! All 20+ handwriting fonts on the platform are completely free. They are self-hosted for instant loading and can be used with any of the handwriting tools including the converter, assignment formatter, and bulk generator.'
+  },
+  {
+    q: 'How do I make digital handwriting fonts look realistic?',
+    a: 'Add slant jitter of plus or minus 2 degrees, vary line heights slightly, use a lined notebook background, and enable the smudge overlay for pencil dust effects. These tweaks bypass automated checks and make output look authentically handwritten.'
+  }
+];
+
 const fontsSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -16,15 +39,32 @@ const fontsSchema = {
     'priceCurrency': 'USD'
   }
 };
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': FONT_FAQS.map(faq => ({
+    '@type': 'Question',
+    'name': faq.q,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': faq.a
+    }
+  }))
+};
+
+const pageSchema = {
+  '@graph': [fontsSchema, faqSchema]
+};
 ---
 
 <BaseLayout 
-  title="Handwriting Font Previewer - Compare 20+ Realistic Handwriting Fonts"
-  description="Compare and preview the best handwriting fonts side-by-side online. Choose from messy print, neat cursive, flowing signatures, and calligraphy fonts."
+  title="Handwriting Font Preview - Text to Handwriting"
+  description="Preview and compare 20+ handwriting fonts side-by-side. Test cursive, neat print, and signature styles with your custom text. Free online tool."
   activeTab="font-preview"
   showHeroGradient={true}
   fullWidth={true}
-  schema={fontsSchema}
+  schema={pageSchema}
 >
   <div class="space-y-6">
     <AdSlot slotId="header-leaderboard" />
@@ -36,22 +76,22 @@ const fontsSchema = {
 
     <FontPreviewApp client:load />
 
-    <!-- Rich SEO Content Section (600+ Words) -->
+    <!-- Rich SEO Content Section -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">The Art of Digital Handwriting Typography</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Best Handwriting Fonts for Notes and Assignments</h2>
           <p>
             When converting typed text to handwriting, the font choice determines the credibility of the output. If you are submitting school assignments or sending personalized letters, using a standard font library makes the page look artificial.
           </p>
           <p>
-            Our handwriting font preview tool is designed to help you analyze and choose the perfect script variant. By rendering a single test sentence across 20+ different fonts simultaneously, you can find the style that matches your preferred neatness, slant, and flow.
+            Our <strong>handwriting font generator preview</strong> tool is designed to help you analyze and choose the perfect script variant. By rendering a single test sentence across 20+ different fonts simultaneously, you can find the style that matches your preferred neatness, slant, and flow.
           </p>
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Classifying Handwriting Font Styles</h2>
+          <h2 class="text-base font-semibold text-primary font-mono">Preview Handwriting Fonts with Custom Text</h2>
           <p>
             To help you navigate, we classify our handwriting catalog into distinct categories:
           </p>
@@ -65,24 +105,46 @@ const fontsSchema = {
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">How to Make Digital Fonts Look Truly Handwritten</h2>
+        <h2 class="text-base font-semibold text-primary font-mono">Realistic Handwriting Font Samples Online</h2>
         <p>
           Selecting a good font is only the first step. To bypass automated check algorithms and make your homework printouts look fully authentic:
         </p>
         <ol class="list-decimal pl-5 space-y-1.5">
-          <li><strong>Add Slant Jitter:</strong> Ensure you adjust the letter rotation slant slightly (±2°). Humans do not write on perfectly straight guidelines.</li>
-          <li><strong>Vary line heights:</strong> Change line spacings to be slightly loose or tight. Tight lines make messy fonts look more compressed and organic.</li>
+          <li><strong>Add Slant Jitter:</strong> Ensure you adjust the letter rotation slant slightly (plus or minus 2 degrees). Humans do not write on perfectly straight guidelines.</li>
+          <li><strong>Vary Line Heights:</strong> Change line spacings to be slightly loose or tight. Tight lines make messy fonts look more compressed and organic.</li>
           <li><strong>Use Lined Notebook Backgrounds:</strong> Placing text on ruled notebook guidelines makes character alignments look natural. Ensure you align your font size to match the line heights.</li>
-          <li><strong>Enable Graphite smudge overlays:</strong> Smudge layers add very faint background pencil dust which prints beautifully on real paper.</li>
+          <li><strong>Enable Graphite Smudge Overlays:</strong> Smudge layers add very faint background pencil dust which prints beautifully on real paper.</li>
         </ol>
       </div>
 
-      <div class="bg-canvas-soft-2 p-6 rounded-lg border border-hairline space-y-3">
-        <h3 class="text-xs font-mono font-bold uppercase text-primary">Explore Cursive and signature Generators</h3>
-        <p class="text-xs">
-          Ready to generate cursive notes? Hop over to the <a href="/assignment-formatter" class="text-link hover:underline">assignment handwriting maker</a>, create digital electronic signatures with our <a href="/signature-generator" class="text-link hover:underline">signature generator</a>, or bulk convert documents with the <a href="/bulk-generator" class="text-link hover:underline">bulk generator tool</a>.
+      <div class="space-y-4">
+        <h2 class="text-base font-semibold text-primary font-mono">Compare Cursive vs Print Handwriting Fonts</h2>
+        <p>
+          The preview tool lets you type your exact assignment text and see it rendered in every font category. For a deeper dive into which style works best for your use case, read our blog post on <a href="/blog" class="text-link hover:underline">handwriting font styles</a>. Once you have picked your font, convert your text using the <a href="/" class="text-link hover:underline">text to handwriting converter</a> or format a complete assignment with the <a href="/assignment-formatter" class="text-link hover:underline">assignment formatter</a>.
+        </p>
+        <p>
+          For cursive-specific output, try the <a href="/text-to-cursive" class="text-link hover:underline">text to cursive converter</a>. Generate personalized signatures with the <a href="/signature-generator" class="text-link hover:underline">signature generator</a>.
         </p>
       </div>
+
+      <!-- FAQ Accordions -->
+      <div class="pt-8 border-t border-hairline space-y-6">
+        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <div class="space-y-3">
+          {FONT_FAQS.map(faq => (
+            <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
+              <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
+                <span>{faq.q}</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
+                <p>{faq.a}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
     </div>
 
     <AdSlot slotId="footer-leaderboard" />
