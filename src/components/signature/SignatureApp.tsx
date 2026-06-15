@@ -24,7 +24,15 @@ export default function SignatureApp() {
   // Re-draw text signature on canvas
   useEffect(() => {
     if (activeTab === 'text') {
-      drawTextSignature();
+      // Wait for font to load before drawing to prevent race condition
+      document.fonts.load(`${fontSize}px "${fontFamily}"`)
+        .then(() => {
+          drawTextSignature();
+        })
+        .catch(() => {
+          // Fallback to drawing immediately if font loading fails
+          drawTextSignature();
+        });
     }
   }, [typedName, fontFamily, inkColor, fontSize, slant, activeTab]);
 

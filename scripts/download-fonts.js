@@ -55,7 +55,11 @@ const FONTS = [
   { name: 'Mynerve', category: 'neat', family: 'Mynerve' },
   { name: 'WaitingfortheSunrise', category: 'neat', family: 'Waiting for the Sunrise' },
   { name: 'CoveredByYourGrace', category: 'neat', family: 'Covered By Your Grace' },
-  { name: 'ComingSoon', category: 'neat', family: 'Coming Soon' }
+  { name: 'ComingSoon', category: 'neat', family: 'Coming Soon' },
+  { name: 'Itim', category: 'neat', family: 'Itim' },
+  { name: 'PermanentMarker', category: 'messy', family: 'Permanent Marker' },
+  { name: 'CaveatBrush', category: 'neat', family: 'Caveat Brush' },
+  { name: 'Lacquer', category: 'messy', family: 'Lacquer' }
 ];
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -90,14 +94,28 @@ async function downloadFont(font) {
   const cssBuffer = await fetchUrl(cssUrl);
   const cssText = cssBuffer.toString('utf-8');
   
-  // Find woff2 source URL
-  // e.g. src: url(https://fonts.gstatic.com/s/caveat/v18/Wn1uHmA5cT2yGoQv7oo.woff2) format('woff2');
-  const urlMatch = cssText.match(/url\((https:\/\/fonts\.gstatic\.com\/[^\)]+)\)\s+format\(['"]woff2['"]\)/);
-  if (!urlMatch) {
+  // Find woff2 source URL for the 'latin' subset if possible
+  let woff2Url;
+  const latinIndex = cssText.indexOf('/* latin */');
+  if (latinIndex !== -1) {
+    const restCss = cssText.substring(latinIndex);
+    const urlMatch = restCss.match(/url\((https:\/\/fonts\.gstatic\.com\/[^\)]+)\)\s+format\(['"]woff2['"]\)/);
+    if (urlMatch) {
+      woff2Url = urlMatch[1];
+    }
+  }
+  if (!woff2Url) {
+    // Fallback to first match
+    const urlMatch = cssText.match(/url\((https:\/\/fonts\.gstatic\.com\/[^\)]+)\)\s+format\(['"]woff2['"]\)/);
+    if (urlMatch) {
+      woff2Url = urlMatch[1];
+    }
+  }
+  
+  if (!woff2Url) {
     throw new Error(`Could not find woff2 URL in CSS for font ${font.name}`);
   }
   
-  const woff2Url = urlMatch[1];
   console.log(`Downloading WOFF2 for ${font.name} from ${woff2Url}...`);
   const fontBuffer = await fetchUrl(woff2Url);
   

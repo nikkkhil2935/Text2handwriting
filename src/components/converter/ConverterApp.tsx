@@ -1465,6 +1465,22 @@ export default function ConverterApp({
         {/* Left Column: Interactive A4 Paper (65%) */}
         <div className="w-full lg:w-[65%] flex flex-col items-center justify-start py-4 bg-canvas-soft border border-hairline rounded-lg shadow-sm min-h-[500px]">
 
+          {/* Preview Header Bar */}
+          <div className="w-full max-w-[480px] flex items-center justify-between border-b border-hairline pb-2 mb-4 px-2 font-mono text-xs text-mute uppercase font-bold tracking-wider select-none">
+            <span className="flex items-center gap-1.5 text-primary">
+              <span className={`w-2 h-2 rounded-full ${editMode === 'edit' ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+              {editMode === 'edit' ? 'Edit Paper Mode' : 'Realism Preview'}
+            </span>
+            {editMode === 'preview' && pages.length > 0 && (
+              <span>
+                Page {previewPageIdx + 1} of {pages.length}
+              </span>
+            )}
+            {editMode === 'edit' && (
+              <span>Interactive Sheet</span>
+            )}
+          </div>
+
           {/* A4 Bounding Sheet Container */}
           <div
             id="preview-container"

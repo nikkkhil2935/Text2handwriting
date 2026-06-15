@@ -411,6 +411,38 @@ body {
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Itim';
+  src: url('/fonts/neat/Itim.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Permanent Marker';
+  src: url('/fonts/messy/PermanentMarker.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caveat Brush';
+  src: url('/fonts/neat/CaveatBrush.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lacquer';
+  src: url('/fonts/messy/Lacquer.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 /* Dark Mode Overrides */
 .dark {

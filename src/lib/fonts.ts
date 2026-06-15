@@ -59,10 +59,10 @@ export const FONTS: FontItem[] = [
   { name: 'WaitingfortheSunrise', family: 'Waiting for the Sunrise', category: 'neat', path: '/fonts/neat/WaitingfortheSunrise.woff2' },
   { name: 'CoveredByYourGrace', family: 'Covered By Your Grace', category: 'neat', path: '/fonts/neat/CoveredByYourGrace.woff2' },
   { name: 'ComingSoon', family: 'Coming Soon', category: 'neat', path: '/fonts/neat/ComingSoon.woff2' },
-  { name: 'Itim', family: 'Itim', category: 'neat', path: 'https://fonts.gstatic.com/s/itim/v16/0nknC9ziJOYe8ANAkA.woff2' },
-  { name: 'PermanentMarker', family: 'Permanent Marker', category: 'messy', path: 'https://fonts.gstatic.com/s/permanentmarker/v16/Fh4uPib9Iyv2ucM6pGQMWimMp004La2Cfw.woff2' },
-  { name: 'CaveatBrush', family: 'Caveat Brush', category: 'neat', path: 'https://fonts.gstatic.com/s/caveatbrush/v12/EYq0maZfwr9S9-ETZc3fKXt8XLOS.woff2' },
-  { name: 'Lacquer', family: 'Lacquer', category: 'messy', path: 'https://fonts.gstatic.com/s/lacquer/v16/EYqzma1QwqpG4_BBN7iKXw.woff2' }
+  { name: 'Itim', family: 'Itim', category: 'neat', path: '/fonts/neat/Itim.woff2' },
+  { name: 'PermanentMarker', family: 'Permanent Marker', category: 'messy', path: '/fonts/messy/PermanentMarker.woff2' },
+  { name: 'CaveatBrush', family: 'Caveat Brush', category: 'neat', path: '/fonts/neat/CaveatBrush.woff2' },
+  { name: 'Lacquer', family: 'Lacquer', category: 'messy', path: '/fonts/messy/Lacquer.woff2' }
 ];
 
 export const CATEGORIES = [
