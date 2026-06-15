@@ -223,7 +223,7 @@ export default function SignatureApp() {
             </div>
           </div>
 
-          <div className="flex-grow bg-neutral-100 dark:bg-neutral-900 p-6 rounded border border-hairline flex items-center justify-center overflow-auto min-h-[220px]">
+          <div className="flex-grow bg-canvas-soft p-6 rounded border border-hairline flex items-center justify-center overflow-auto min-h-[220px]">
             {activeTab === 'text' ? (
               <canvas
                 ref={canvasRef}

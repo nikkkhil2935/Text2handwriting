@@ -21,7 +21,7 @@ const assignmentSchema = {
 <BaseLayout 
   title="Assignment Handwriting Maker - Free Homework Page Formatter"
   description="Convert your school homework and college assignments into realistic handwritten pages. Customize notebook lines, margin layouts, and download print-ready PDFs."
-  activeTab="home"
+  activeTab="assignment"
   showHeroGradient={true}
   fullWidth={true}
   schema={assignmentSchema}
@@ -34,7 +34,7 @@ const assignmentSchema = {
       <p class="text-xs text-mute font-mono">Convert your homework text files into realistic, neat handwritten assignment sheets.</p>
     </div>
 
-    <ConverterApp client:load defaultFont="Architects Daughter" defaultPaper="a4-notebook" />
+    <ConverterApp client:load defaultFont="Architects Daughter" defaultPaper="a4-notebook" isAssignmentMode={true} />
 
     <!-- Rich SEO Content Section (600+ Words) -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">

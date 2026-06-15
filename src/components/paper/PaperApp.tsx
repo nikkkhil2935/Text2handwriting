@@ -193,7 +193,7 @@ export default function PaperApp() {
           <div className="flex items-center justify-between mb-3 border-b border-hairline pb-2.5">
             <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body">Paper Preview</span>
           </div>
-          <div className="flex-grow bg-neutral-200 dark:bg-neutral-800 p-4 rounded border border-hairline flex items-center justify-center overflow-auto min-h-[400px]">
+          <div className="flex-grow bg-canvas-soft p-4 rounded border border-hairline flex items-center justify-center overflow-auto min-h-[400px]">
             {previewUrl ? (
               <img src={previewUrl} alt="Paper preview" className="w-full max-w-[400px] shadow rounded border object-contain bg-white" />
             ) : (

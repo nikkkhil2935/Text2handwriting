@@ -34,6 +34,88 @@ async function loadFontInWorker(name, url) {
   }
 }
 
+function parseParagraphToItems(para, elements) {
+  const assetRegex = /\[(image|formula|table):\s*([a-zA-Z0-9_\-]+)\]/g;
+  const items = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = assetRegex.exec(para)) !== null) {
+    const textBefore = para.substring(lastIndex, match.index);
+    if (textBefore) {
+      items.push(...parseTextToWords(textBefore));
+    }
+    
+    const assetType = match[1];
+    const assetId = match[2];
+    const el = elements.find(e => e.id === assetId);
+    
+    items.push({
+      type: 'asset',
+      assetType,
+      assetId,
+      element: el
+    });
+    
+    lastIndex = assetRegex.lastIndex;
+  }
+  
+  const textAfter = para.substring(lastIndex);
+  if (textAfter) {
+    items.push(...parseTextToWords(textAfter));
+  }
+  
+  return items;
+}
+
+function parseTextToWords(text) {
+  const regex = /(\*\*.*?\*\*|\*.*?\*|__.*?__)/g;
+  const parts = text.split(regex);
+  const words = [];
+  
+  for (const part of parts) {
+    if (!part) continue;
+    let subtext = part;
+    let bold = false;
+    let italic = false;
+    let underline = false;
+    
+    if (part.startsWith('**') && part.endsWith('**')) {
+      subtext = part.slice(2, -2);
+      bold = true;
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      subtext = part.slice(1, -1);
+      italic = true;
+    } else if (part.startsWith('__') && part.endsWith('__')) {
+      subtext = part.slice(2, -2);
+      underline = true;
+    }
+    
+    const wordParts = subtext.split(/(\s+)/);
+    for (const wp of wordParts) {
+      if (!wp) continue;
+      if (/^\s+$/.test(wp)) {
+        words.push({
+          type: 'space',
+          length: wp.length,
+          bold,
+          italic,
+          underline
+        });
+      } else {
+        words.push({
+          type: 'word',
+          text: wp,
+          bold,
+          italic,
+          underline
+        });
+      }
+    }
+  }
+  return words;
+}
+
 self.onmessage = async function(e) {
   const {
     text,
@@ -61,8 +143,16 @@ self.onmessage = async function(e) {
     },
     paperWidth = 800, // canvas size
     paperHeight = 1130, // A4 ratio (~1.41)
-    pageHeader = '',
-    pageFooter = '',
+    headerLeft = '',
+    headerCenter = '',
+    headerRight = '',
+    footerLeft = '',
+    footerCenter = '',
+    footerRight = '',
+    sameHeaderAllPages = true,
+    isAssignmentHeaderEnabled = false,
+    assignmentFields = [],
+    lineMarginPadding = 15,
     backgroundImageBitmap = null, // Custom paper background
     dpiMultiplier = 1.0, // for high-res exports
     elements = [],
@@ -127,81 +217,138 @@ self.onmessage = async function(e) {
 
   // 2. Wrap text into lines & paginate
   const paragraphs = text.split('\n');
-  const pages = [];
-  let currentPageLines = [];
+  const allWrappedLines = [];
 
   const printableWidth = w - mLeft - mRight;
   const printableHeight = h - mTop - mBottom;
-  const maxLinesPerPage = Math.floor(printableHeight / lineStep);
 
-  // Pagination loop
   for (let i = 0; i < paragraphs.length; i++) {
     const para = paragraphs[i];
     
     // Check manual page break
     if (para.trim() === '---page break---') {
-      if (currentPageLines.length > 0) {
-        pages.push(currentPageLines);
-        currentPageLines = [];
-      }
+      allWrappedLines.push({ type: 'page-break' });
       continue;
     }
 
     if (para === '') {
-      currentPageLines.push({ type: 'empty' });
-      if (currentPageLines.length >= maxLinesPerPage) {
-        pages.push(currentPageLines);
-        currentPageLines = [];
-      }
+      allWrappedLines.push({ type: 'empty' });
       continue;
     }
 
-    const words = para.split(' ');
-    let currentLineWords = [];
-    let currentLineWidth = 0;
-
-    for (let j = 0; j < words.length; j++) {
-      const word = words[j];
-      const wordMetrics = measureCtx.measureText(word);
-      const spaceMetrics = measureCtx.measureText(' ');
-      
-      const isComplex = /[^\u0000-\u024F\u2000-\u206F]/.test(word);
-      const wordWidth = isComplex ? wordMetrics.width : wordMetrics.width + (word.length - 1) * lSpace;
-      const spaceWidth = spaceMetrics.width + wSpace;
-
-      const addedWidth = currentLineWords.length === 0 ? wordWidth : spaceWidth + wordWidth;
-
-      if (currentLineWidth + addedWidth <= printableWidth) {
-        currentLineWords.push(word);
-        currentLineWidth += addedWidth;
-      } else {
-        // Line wrap
-        if (currentLineWords.length > 0) {
-          currentPageLines.push({ type: 'text', words: currentLineWords, width: currentLineWidth });
+    const paragraphItems = parseParagraphToItems(para, elements);
+    
+    // Measure items and calculate their layout width/height
+    for (const item of paragraphItems) {
+      if (item.type === 'word') {
+        const isItalicActive = isItalic || item.italic;
+        const isBoldActive = isBold || item.bold;
+        measureCtx.font = `${isItalicActive ? 'italic ' : ''}${isBoldActive ? 'bold ' : ''}${fSize}px "${fontName}"`;
+        const metrics = measureCtx.measureText(item.text);
+        const isComplex = /[^\u0000-\u024F\u2000-\u206F]/.test(item.text);
+        item.width = isComplex ? metrics.width : metrics.width + (item.text.length - 1) * lSpace;
+        item.height = fSize;
+      } else if (item.type === 'space') {
+        const isItalicActive = isItalic || item.italic;
+        const isBoldActive = isBold || item.bold;
+        measureCtx.font = `${isItalicActive ? 'italic ' : ''}${isBoldActive ? 'bold ' : ''}${fSize}px "${fontName}"`;
+        const metrics = measureCtx.measureText(' ');
+        item.width = (metrics.width + wSpace) * item.length;
+        item.height = fSize;
+      } else if (item.type === 'asset') {
+        let assetW = 50 * scale;
+        let assetH = 25 * scale;
+        const el = item.element;
+        if (el) {
+          assetW = (el.width / 100) * printableWidth;
+          assetH = (el.height / 100) * printableHeight;
+          if (el.bitmap) {
+            const aspect = el.bitmap.width / el.bitmap.height;
+            assetH = assetW / aspect;
+          }
         }
-        
-        currentLineWords = [word];
-        currentLineWidth = wordWidth;
-
-        // Check if page needs to break
-        if (currentPageLines.length >= maxLinesPerPage) {
-          pages.push(currentPageLines);
-          currentPageLines = [];
-        }
+        item.width = assetW;
+        item.height = assetH;
       }
     }
 
-    if (currentLineWords.length > 0) {
-      currentPageLines.push({ type: 'text', words: currentLineWords, width: currentLineWidth });
+    // Wrap items of this paragraph into lines
+    let currentLineItems = [];
+    let currentLineWidth = 0;
+    
+    for (const item of paragraphItems) {
+      if (currentLineWidth + item.width <= printableWidth || currentLineItems.length === 0) {
+        currentLineItems.push(item);
+        currentLineWidth += item.width;
+      } else {
+        allWrappedLines.push({
+          type: 'items-line',
+          items: currentLineItems,
+          width: currentLineWidth
+        });
+        currentLineItems = [item];
+        currentLineWidth = item.width;
+      }
     }
-
-    // Paragraph spacing (add empty line or spacer)
-    if (currentPageLines.length >= maxLinesPerPage) {
-      pages.push(currentPageLines);
-      currentPageLines = [];
+    if (currentLineItems.length > 0) {
+      allWrappedLines.push({
+        type: 'items-line',
+        items: currentLineItems,
+        width: currentLineWidth
+      });
     }
   }
 
+  // Paginate wrapped lines into pages using Y offsets
+  const pages = [];
+  let currentPageLines = [];
+  let currentPageY = mTop + lineStep;
+  if (isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0) {
+    const leftFields = assignmentFields.filter(f => f.alignment === 'left');
+    const rightFields = assignmentFields.filter(f => f.alignment === 'right');
+    const maxRows = Math.max(leftFields.length, rightFields.length);
+    currentPageY = mTop + (maxRows + 1) * lineStep;
+  }
+
+  for (const line of allWrappedLines) {
+    if (line.type === 'page-break') {
+      if (currentPageLines.length > 0) {
+        pages.push(currentPageLines);
+        currentPageLines = [];
+      }
+      currentPageY = mTop + lineStep;
+      continue;
+    }
+
+    if (line.type === 'empty') {
+      if (currentPageLines.length > 0 && currentPageY + lineStep > h - mBottom) {
+        pages.push(currentPageLines);
+        currentPageLines = [];
+        currentPageY = mTop + lineStep;
+      }
+      currentPageLines.push(line);
+      currentPageY += lineStep;
+      continue;
+    }
+
+    const lineMaxHeight = Math.max(...line.items.map(it => it.height || fSize), fSize);
+    const lineSteps = Math.max(1, Math.ceil(lineMaxHeight / lineStep));
+    const lineReservedHeight = lineSteps * lineStep;
+
+    if (currentPageLines.length > 0 && currentPageY + lineReservedHeight - lineStep > h - mBottom) {
+      pages.push(currentPageLines);
+      currentPageLines = [];
+      currentPageY = mTop + lineStep;
+    }
+
+    line.lineSteps = lineSteps;
+    line.lineReservedHeight = lineReservedHeight;
+    line.lineMaxHeight = lineMaxHeight;
+
+    currentPageLines.push(line);
+    currentPageY += lineReservedHeight;
+  }
+  
   if (currentPageLines.length > 0) {
     pages.push(currentPageLines);
   }
@@ -218,176 +365,255 @@ self.onmessage = async function(e) {
     const canvas = new OffscreenCanvas(w, h);
     const ctx = canvas.getContext('2d');
 
-    // Make canvas smooth
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     // A. Draw background / paper styling
     drawPaperBackground(ctx, w, h, paperStyle, mLeft, mRight, mTop, mBottom, gridSize * scale, scale, backgroundImageBitmap);
 
-    // B. Draw Header
-    if (pageHeader) {
+    // B. Draw Header (Left, Center, Right)
+    const shouldDrawHeader = sameHeaderAllPages || pageIdx === 0;
+    if (shouldDrawHeader && !isAssignmentHeaderEnabled && (headerLeft || headerCenter || headerRight)) {
       ctx.save();
       ctx.font = `${fSize * 0.7}px "${fontName}"`;
       ctx.fillStyle = inkColor;
       ctx.globalAlpha = 0.8;
-      ctx.fillText(pageHeader, mLeft, mTop - fSize * 0.8);
+      ctx.textBaseline = 'bottom';
+      
+      const headerY = mTop - fSize * 0.4;
+      
+      if (headerLeft) {
+        ctx.textAlign = 'left';
+        ctx.fillText(headerLeft, mLeft, headerY);
+      }
+      if (headerCenter) {
+        ctx.textAlign = 'center';
+        ctx.fillText(headerCenter, w / 2, headerY);
+      }
+      if (headerRight) {
+        ctx.textAlign = 'right';
+        ctx.fillText(headerRight, w - mRight, headerY);
+      }
       ctx.restore();
     }
 
-    // C. Draw Footer (page numbering optionally formatted)
-    if (pageFooter) {
+    // B2. Draw Assignment Cover Header (First Page Only)
+    let maxRows = 0;
+    if (pageIdx === 0 && isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0) {
+      ctx.save();
+      ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fSize * 0.95}px "${fontName}"`;
+      ctx.fillStyle = inkColor;
+      ctx.textBaseline = 'alphabetic';
+      applyInkType(ctx, inkType, 0.95);
+
+      const leftFields = assignmentFields.filter(f => f.alignment === 'left');
+      const rightFields = assignmentFields.filter(f => f.alignment === 'right');
+      maxRows = Math.max(leftFields.length, rightFields.length);
+
+      const rowHeight = lineStep;
+      const startHeaderY = mTop + lineStep;
+
+      for (let r = 0; r < maxRows; r++) {
+        const currentY = startHeaderY + r * rowHeight;
+        
+        // Left Column Field
+        if (leftFields[r]) {
+          const field = leftFields[r];
+          const textToDraw = field.value ? `${field.label}: ${field.value}` : `${field.label}: ____________________`;
+          ctx.fillText(textToDraw, mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale, currentY - 5 * scale);
+        }
+
+        // Right Column Field
+        if (rightFields[r]) {
+          const field = rightFields[r];
+          const textToDraw = field.value ? `${field.label}: ${field.value}` : `${field.label}: _________`;
+          ctx.save();
+          ctx.textAlign = 'right';
+          ctx.fillText(textToDraw, w - mRight, currentY - 5 * scale);
+          ctx.restore();
+        }
+      }
+
+      // Divider Line: Draw double horizontal ruled line at mTop + maxRows * lineStep
+      ctx.beginPath();
+      ctx.strokeStyle = '#ff8a8a'; // matching the vertical margin line
+      ctx.lineWidth = 1.5 * scale;
+      const dividerY = mTop + maxRows * lineStep;
+      ctx.moveTo(mLeft, dividerY);
+      ctx.lineTo(w - mRight, dividerY);
+      ctx.moveTo(mLeft, dividerY + 3 * scale);
+      ctx.lineTo(w - mRight, dividerY + 3 * scale);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // C. Draw Footer (Left, Center, Right)
+    if (footerLeft || footerCenter || footerRight) {
       ctx.save();
       ctx.font = `${fSize * 0.7}px "${fontName}"`;
       ctx.fillStyle = inkColor;
       ctx.globalAlpha = 0.8;
-      const formattedFooter = pageFooter
+      ctx.textBaseline = 'top';
+      
+      const footerY = h - mBottom + fSize * 0.4;
+      
+      const formatF = (str) => str
         .replace(/{page}/g, String(pageIdx + 1))
         .replace(/{pages}/g, String(pages.length));
-      
-      const footMetrics = ctx.measureText(formattedFooter);
-      ctx.fillText(formattedFooter, w - mRight - footMetrics.width, h - mBottom + fSize * 1.2);
+        
+      if (footerLeft) {
+        ctx.textAlign = 'left';
+        ctx.fillText(formatF(footerLeft), mLeft, footerY);
+      }
+      if (footerCenter) {
+        ctx.textAlign = 'center';
+        ctx.fillText(formatF(footerCenter), w / 2, footerY);
+      }
+      if (footerRight) {
+        ctx.textAlign = 'right';
+        ctx.fillText(formatF(footerRight), w - mRight, footerY);
+      }
       ctx.restore();
     }
 
-    // D. Render lines - align text baseline to paper lines
-    ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fSize}px "${fontName}"`;
-    ctx.textBaseline = 'alphabetic';
-
-    const firstLineY = mTop + lineStep;
-    let currentY = firstLineY;
+    // D. Render lines
+    let currentPageY = mTop + lineStep;
+    if (pageIdx === 0 && isAssignmentHeaderEnabled && maxRows > 0) {
+      currentPageY = mTop + (maxRows + 1) * lineStep;
+    }
 
     for (let l = 0; l < lines.length; l++) {
       const line = lines[l];
       if (line.type === 'empty') {
-        currentY += lineStep;
+        currentPageY += lineStep;
         continue;
       }
 
-      const words = line.words;
-      let startX = mLeft;
+      const baselineY = currentPageY + (line.lineSteps - 1) * lineStep;
+      let startX = mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale;
 
-      // Handle alignment
       if (alignment === 'center') {
         startX = mLeft + (printableWidth - line.width) / 2;
       } else if (alignment === 'right') {
         startX = w - mRight - line.width;
       }
 
-      // Render line with baseline drift
       const lineDriftMax = realism.baselineDrift * realism.messiness * scale;
-      // Linear drift across the line (e.g. rising or falling)
       const lineAngleDrift = (rand() - 0.5) * lineDriftMax * 2; 
 
       let currentX = startX;
 
-      for (let wIdx = 0; wIdx < words.length; wIdx++) {
-        const word = words[wIdx];
-        
-        // Add word spacing if not first word
-        if (wIdx > 0) {
-          const spaceMetrics = ctx.measureText(' ');
-          currentX += spaceMetrics.width + wSpace;
+      for (let itemIdx = 0; itemIdx < line.items.length; itemIdx++) {
+        const item = line.items[itemIdx];
+
+        if (item.type === 'space') {
+          currentX += item.width;
+          continue;
         }
 
-        const isComplex = /[^\u0000-\u024F\u2000-\u206F]/.test(word);
-
-        if (isComplex) {
-          // Render the entire word as a single shaped unit to preserve Devanagari/Hindi ligatures & combining marks
-          const wordMetrics = ctx.measureText(word);
-
-          // Realism calculations for the entire word
-          const wordRot = (rand() - 0.5) * realism.rotation * realism.messiness * (Math.PI / 180);
-          const vJitter = (rand() - 0.5) * realism.vJitter * realism.messiness * scale;
-          const hJitter = (rand() - 0.5) * realism.hJitter * realism.messiness * scale;
-          const pressure = 1.0 - (rand() * realism.pressureVariation * realism.messiness);
-
-          const progress = (currentX - mLeft) / printableWidth;
-          const cumulativeDrift = progress * lineAngleDrift;
-
-          ctx.save();
-          ctx.fillStyle = inkColor;
-          applyInkType(ctx, inkType, pressure);
-
-          const drawX = currentX + hJitter;
-          const drawY = currentY + vJitter + cumulativeDrift;
-
-          ctx.translate(drawX + wordMetrics.width / 2, drawY - fSize / 3);
-          ctx.rotate(wordRot);
-          ctx.fillText(word, -wordMetrics.width / 2, fSize / 3);
-          
-          if (isUnderline) {
-            ctx.beginPath();
-            ctx.moveTo(-wordMetrics.width / 2, fSize / 3 + 2 * scale);
-            ctx.lineTo(wordMetrics.width / 2, fSize / 3 + 2 * scale);
-            ctx.strokeStyle = inkColor;
-            ctx.lineWidth = 1.2 * scale;
-            ctx.stroke();
+        if (item.type === 'asset') {
+          const el = item.element;
+          if (el && el.bitmap) {
+            ctx.save();
+            const drawY = baselineY - item.height;
+            ctx.drawImage(el.bitmap, currentX, drawY, item.width, item.height);
+            ctx.restore();
           }
+          currentX += item.width;
+          continue;
+        }
 
-          ctx.restore();
+        if (item.type === 'word') {
+          const word = item.text;
+          const isItalicActive = isItalic || item.italic;
+          const isBoldActive = isBold || item.bold;
+          const isUnderlineActive = isUnderline || item.underline;
 
-          currentX += wordMetrics.width;
-        } else {
-          // Character-by-character rendering for standard Latin/English scripts
-          for (let charIdx = 0; charIdx < word.length; charIdx++) {
-            const char = word[charIdx];
-            const charMetrics = ctx.measureText(char);
+          ctx.font = `${isItalicActive ? 'italic ' : ''}${isBoldActive ? 'bold ' : ''}${fSize}px "${fontName}"`;
+          ctx.textBaseline = 'alphabetic';
 
-            // Realism calculations
-            const charRot = (rand() - 0.5) * realism.rotation * realism.messiness * (Math.PI / 180);
+          const isComplex = /[^\u0000-\u024F\u2000-\u206F]/.test(word);
+
+          if (isComplex) {
+            const wordMetrics = ctx.measureText(word);
+            const wordRot = (rand() - 0.5) * realism.rotation * realism.messiness * (Math.PI / 180);
             const vJitter = (rand() - 0.5) * realism.vJitter * realism.messiness * scale;
             const hJitter = (rand() - 0.5) * realism.hJitter * realism.messiness * scale;
             const pressure = 1.0 - (rand() * realism.pressureVariation * realism.messiness);
 
-            // Baseline drift based on progress across the page
             const progress = (currentX - mLeft) / printableWidth;
             const cumulativeDrift = progress * lineAngleDrift;
 
             ctx.save();
             ctx.fillStyle = inkColor;
-
-            // Apply opacity based on pressure and ink preset
             applyInkType(ctx, inkType, pressure);
 
-            // Position character
             const drawX = currentX + hJitter;
-            const drawY = currentY + vJitter + cumulativeDrift;
+            const drawY = baselineY + vJitter + cumulativeDrift;
 
-            // Translate, rotate, and draw
-            ctx.translate(drawX + charMetrics.width / 2, drawY - fSize / 3);
-            ctx.rotate(charRot);
-            ctx.fillText(char, -charMetrics.width / 2, fSize / 3);
+            ctx.translate(drawX + wordMetrics.width / 2, drawY - fSize / 3);
+            ctx.rotate(wordRot);
+            ctx.fillText(word, -wordMetrics.width / 2, fSize / 3);
             
-            if (isUnderline) {
+            if (isUnderlineActive) {
               ctx.beginPath();
-              ctx.moveTo(-charMetrics.width / 2, fSize / 3 + 2 * scale);
-              ctx.lineTo(charMetrics.width / 2, fSize / 3 + 2 * scale);
+              ctx.moveTo(-wordMetrics.width / 2, fSize / 3 + 2 * scale);
+              ctx.lineTo(wordMetrics.width / 2, fSize / 3 + 2 * scale);
               ctx.strokeStyle = inkColor;
               ctx.lineWidth = 1.2 * scale;
               ctx.stroke();
             }
 
             ctx.restore();
+            currentX += wordMetrics.width;
+          } else {
+            for (let charIdx = 0; charIdx < word.length; charIdx++) {
+              const char = word[charIdx];
+              const charMetrics = ctx.measureText(char);
 
-            // Advance cursor
-            currentX += charMetrics.width + lSpace;
+              const charRot = (rand() - 0.5) * realism.rotation * realism.messiness * (Math.PI / 180);
+              const vJitter = (rand() - 0.5) * realism.vJitter * realism.messiness * scale;
+              const hJitter = (rand() - 0.5) * realism.hJitter * realism.messiness * scale;
+              const pressure = 1.0 - (rand() * realism.pressureVariation * realism.messiness);
+
+              const progress = (currentX - mLeft) / printableWidth;
+              const cumulativeDrift = progress * lineAngleDrift;
+
+              ctx.save();
+              ctx.fillStyle = inkColor;
+              applyInkType(ctx, inkType, pressure);
+
+              const drawX = currentX + hJitter;
+              const drawY = baselineY + vJitter + cumulativeDrift;
+
+              ctx.translate(drawX + charMetrics.width / 2, drawY - fSize / 3);
+              ctx.rotate(charRot);
+              ctx.fillText(char, -charMetrics.width / 2, fSize / 3);
+              
+              if (isUnderlineActive) {
+                ctx.beginPath();
+                ctx.moveTo(-charMetrics.width / 2, fSize / 3 + 2 * scale);
+                ctx.lineTo(charMetrics.width / 2, fSize / 3 + 2 * scale);
+                ctx.strokeStyle = inkColor;
+                ctx.lineWidth = 1.2 * scale;
+                ctx.stroke();
+              }
+
+              ctx.restore();
+              currentX += charMetrics.width + lSpace;
+            }
           }
         }
       }
 
-      currentY += lineStep;
+      currentPageY += line.lineReservedHeight;
     }
 
-    // E. Draw Custom Elements (Images, Formulas, Tables, Sketches)
+    // E. Draw Custom Elements (Sketches, absolute overlays)
     const pageElements = elements ? elements.filter(el => el.pageIndex === pageIdx) : [];
 
     for (const el of pageElements) {
-      const elX = (el.x / 100) * w;
-      const elY = (el.y / 100) * h;
-      const elW = (el.width / 100) * w;
-      const elH = (el.height / 100) * h;
-
       if (el.type === 'sketch' && el.strokes) {
         ctx.save();
         ctx.strokeStyle = inkColor;
@@ -410,6 +636,10 @@ self.onmessage = async function(e) {
         ctx.restore();
       } else if (el.bitmap) {
         ctx.save();
+        const elX = (el.x / 100) * w;
+        const elY = (el.y / 100) * h;
+        const elW = (el.width / 100) * w;
+        const elH = (el.height / 100) * h;
         ctx.drawImage(el.bitmap, elX, elY, elW, elH);
         ctx.restore();
       }
@@ -451,7 +681,7 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
   ctx.strokeStyle = '#c8c8c8'; // darker grey for visible paper lines
   ctx.lineWidth = 1.5 * scale;
 
-  if (style === 'single-ruled' || style === 'a4-notebook' || style === 'legal') {
+  if (style === 'single-ruled' || style === 'legal') {
     // Draw horizontal lines
     const startY = mTop;
     const endY = h - mBottom;
@@ -459,8 +689,8 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
 
     ctx.beginPath();
     for (let y = startY; y <= endY; y += step) {
-      ctx.moveTo(mLeft, y);
-      ctx.lineTo(w - mRight, y);
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
     }
     ctx.stroke();
 
@@ -490,18 +720,18 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
     for (let y = startY; y <= endY; y += step) {
       // Top guideline (solid light blue/grey)
       ctx.strokeStyle = '#b8cce8';
-      ctx.moveTo(mLeft, y);
-      ctx.lineTo(w - mRight, y);
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
       
       // Middle baseline (solid grey)
       ctx.strokeStyle = '#aaaaaa';
-      ctx.moveTo(mLeft, y + innerStep);
-      ctx.lineTo(w - mRight, y + innerStep);
+      ctx.moveTo(0, y + innerStep);
+      ctx.lineTo(w, y + innerStep);
       
       // Bottom guideline (solid light blue/grey)
       ctx.strokeStyle = '#b8cce8';
-      ctx.moveTo(mLeft, y + innerStep * 2);
-      ctx.lineTo(w - mRight, y + innerStep * 2);
+      ctx.moveTo(0, y + innerStep * 2);
+      ctx.lineTo(w, y + innerStep * 2);
     }
     ctx.stroke();
 
@@ -518,14 +748,14 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
 
     ctx.beginPath();
     // vertical lines
-    for (let x = mLeft; x <= w - mRight; x += step) {
-      ctx.moveTo(x, mTop);
-      ctx.lineTo(x, h - mBottom);
+    for (let x = 0; x <= w; x += step) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
     }
     // horizontal lines
-    for (let y = mTop; y <= h - mBottom; y += step) {
-      ctx.moveTo(mLeft, y);
-      ctx.lineTo(w - mRight, y);
+    for (let y = 0; y <= h; y += step) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
     }
     ctx.stroke();
   } else if (style === 'dot-grid') {
@@ -550,8 +780,8 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
     ctx.beginPath();
     ctx.strokeStyle = '#999999';
     ctx.lineWidth = 2 * scale;
-    ctx.moveTo(mLeft, startY);
-    ctx.lineTo(w - mRight, startY);
+    ctx.moveTo(0, startY);
+    ctx.lineTo(w, startY);
     ctx.stroke();
 
     // Draw horizontal lines
@@ -559,8 +789,8 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
     ctx.strokeStyle = '#c8c8c8';
     ctx.lineWidth = 1.5 * scale;
     for (let y = startY + step; y <= endY; y += step) {
-      ctx.moveTo(mLeft, y);
-      ctx.lineTo(w - mRight, y);
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
     }
     ctx.stroke();
 

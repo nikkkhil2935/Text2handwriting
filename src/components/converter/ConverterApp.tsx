@@ -206,9 +206,12 @@ const drawFormulaToDataUrl = async (
   inkColor: string
 ): Promise<string> => {
   const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.opacity = '0';
+  container.style.pointerEvents = 'none';
+  container.style.zIndex = '-100';
   container.style.padding = '15px';
   container.style.background = 'transparent';
   container.style.color = inkColor;
@@ -223,6 +226,8 @@ const drawFormulaToDataUrl = async (
     });
     
     await document.fonts.ready;
+    // Wait for browser painting & font rendering
+    await new Promise((resolve) => setTimeout(resolve, 100));
     
     const dataUrl = await htmlToImage.toPng(container, {
       backgroundColor: 'transparent',
@@ -303,7 +308,15 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
   );
 };
 
-export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFont?: string; defaultPaper?: string }) {
+export default function ConverterApp({ 
+  defaultFont, 
+  defaultPaper,
+  isAssignmentMode = false
+}: { 
+  defaultFont?: string; 
+  defaultPaper?: string; 
+  isAssignmentMode?: boolean 
+}) {
   // Config state
   const [text, setText] = useState(SAMPLE_TEXT);
   const [fontFamily, setFontFamily] = useState(defaultFont || 'Architects Daughter');
@@ -327,8 +340,37 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
   const [smudge, setSmudge] = useState(false);
   const [seed, setSeed] = useState(12345);
   
-  const [pageHeader, setPageHeader] = useState('Name: ____________  Date: ________');
-  const [pageFooter, setPageFooter] = useState('Page {page} of {pages}');
+  const [headerLeft, setHeaderLeft] = useState('Name: ____________');
+  const [headerCenter, setHeaderCenter] = useState('');
+  const [headerRight, setHeaderRight] = useState('Date: ________');
+  const [footerLeft, setFooterLeft] = useState('');
+  const [footerCenter, setFooterCenter] = useState('');
+  const [footerRight, setFooterRight] = useState('Page {page} of {pages}');
+  const [sameHeaderAllPages, setSameHeaderAllPages] = useState(true);
+
+  // Assignment Header States
+  const [isAssignmentHeaderEnabled, setIsAssignmentHeaderEnabled] = useState(isAssignmentMode);
+  const [assignmentFields, setAssignmentFields] = useState<Array<{
+    id: string;
+    label: string;
+    value: string;
+    alignment: 'left' | 'right';
+  }>>([
+    { id: '1', label: 'Name', value: '', alignment: 'left' },
+    { id: '2', label: 'Roll No', value: '', alignment: 'right' },
+    { id: '3', label: 'Subject', value: '', alignment: 'left' },
+    { id: '4', label: 'Class/Sec', value: '', alignment: 'right' },
+    { id: '5', label: 'Date', value: (() => {
+      const d = new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    })(), alignment: 'left' }
+  ]);
+
+  // Left Margin Padding State
+  const [lineMarginPadding, setLineMarginPadding] = useState(15);
   
   // Custom paper background
   const [customBgBitmap, setCustomBgBitmap] = useState<ImageBitmap | null>(null);
@@ -429,6 +471,56 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
   const renderTimeoutRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pagesRef = useRef<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertTextAtCursor = (insertedText: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      handleTextChange(text + insertedText);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const newText = text.substring(0, start) + insertedText + text.substring(end);
+    handleTextChange(newText);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + insertedText.length, start + insertedText.length);
+    }, 0);
+  };
+
+  const handleToggleFormat = (tag: '**' | '*' | '__') => {
+    const el = textareaRef.current;
+    if (!el) {
+      if (tag === '**') setIsBold(!isBold);
+      if (tag === '*') setIsItalic(!isItalic);
+      if (tag === '__') setIsUnderline(!isUnderline);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selText = text.substring(start, end);
+    if (start !== end) {
+      let newText;
+      if (selText.startsWith(tag) && selText.endsWith(tag)) {
+        newText = text.substring(0, start) + selText.slice(tag.length, -tag.length) + text.substring(end);
+      } else {
+        newText = text.substring(0, start) + tag + selText + tag + text.substring(end);
+      }
+      handleTextChange(newText);
+      setTimeout(() => {
+        el.focus();
+        el.setSelectionRange(start, start + newText.length - text.length + (end - start));
+      }, 0);
+    } else {
+      const newText = text.substring(0, start) + tag + tag + text.substring(end);
+      handleTextChange(newText);
+      setTimeout(() => {
+        el.focus();
+        el.setSelectionRange(start + tag.length, start + tag.length);
+      }, 0);
+    }
+  };
 
   // Keep pagesRef in sync with state
   useEffect(() => {
@@ -531,8 +623,16 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
           smudge,
           seed
         },
-        pageHeader,
-        pageFooter,
+        headerLeft,
+        headerCenter,
+        headerRight,
+        footerLeft,
+        footerCenter,
+        footerRight,
+        sameHeaderAllPages,
+        isAssignmentHeaderEnabled,
+        assignmentFields,
+        lineMarginPadding,
         backgroundImageBitmap: customBgBitmap,
         dpiMultiplier: 1.0, // Render on screen at 1x
         paperWidth,
@@ -560,7 +660,8 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
   }, [
     text, fontFamily, paperStyle, gridSize, inkColor, inkType, fontSize, lineHeight,
     wordSpacing, letterSpacing, alignment, margins, messiness, rotation, vJitter,
-    hJitter, baselineDrift, pressureVariation, smudge, seed, pageHeader, pageFooter,
+    hJitter, baselineDrift, pressureVariation, smudge, seed, headerLeft, headerCenter, headerRight, footerLeft, footerCenter, footerRight, sameHeaderAllPages,
+    isAssignmentHeaderEnabled, assignmentFields, lineMarginPadding,
     customBgBitmap, exportPaper, canvasElements, isBold, isItalic, isUnderline, customFonts
   ]);
 
@@ -772,8 +873,16 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
           smudge,
           seed
         },
-        pageHeader,
-        pageFooter,
+        headerLeft,
+        headerCenter,
+        headerRight,
+        footerLeft,
+        footerCenter,
+        footerRight,
+        sameHeaderAllPages,
+        isAssignmentHeaderEnabled,
+        assignmentFields,
+        lineMarginPadding,
         backgroundImageBitmap: customBgBitmap,
         dpiMultiplier: dpi,
         paperWidth,
@@ -963,7 +1072,7 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
         height: 20,
         dataUrl
       };
-      setCanvasElements([...canvasElements, newElement]);
+      setCanvasElements(prev => [...prev, newElement]);
       showToast('Image inserted!');
     };
     reader.readAsDataURL(file);
@@ -1069,8 +1178,78 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
         backgroundColor: '#ffffff'
       };
     }
-    
+
     return { backgroundColor: '#ffffff' };
+  };
+
+  const renderElementsOverlay = (isInteractive: boolean) => {
+    return canvasElements
+      .filter(el => el.pageIndex === previewPageIdx && el.type !== 'sketch')
+      .map(el => (
+        <div
+          key={el.id}
+          onClick={(e) => {
+            if (!isInteractive) return;
+            e.stopPropagation();
+            setSelectedElementId(el.id);
+          }}
+          style={{
+            position: 'absolute',
+            left: `${el.x}%`,
+            top: `${el.y}%`,
+            width: `${el.width}%`,
+            height: `${el.height}%`,
+            border: selectedElementId === el.id 
+              ? '1.5px dashed #0070f3' 
+              : isInteractive ? '1.5px dashed #cbd5e1' : 'none',
+            backgroundColor: isInteractive ? 'rgba(255, 255, 255, 0.75)' : 'transparent',
+            pointerEvents: isInteractive ? 'auto' : 'none',
+            zIndex: 10
+          }}
+          className="group"
+        >
+          {el.type === 'image' && el.dataUrl && (
+            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+          )}
+          {el.type === 'formula' && el.dataUrl && (
+            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+          )}
+          {el.type === 'table' && el.dataUrl && (
+            <img src={el.dataUrl} className="w-full h-full object-contain pointer-events-none" />
+          )}
+          
+          {isInteractive && (
+            <>
+              {/* Drag Handle (top/center bar) */}
+              <div
+                className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors"
+                onMouseDown={(e) => handleDragStart(e, el)}
+                title="Drag Element"
+              />
+
+              {/* Resize Handle (bottom right corner) */}
+              <div
+                className="absolute right-0 bottom-0 w-3 h-3 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                onMouseDown={(e) => handleResizeStart(e, el)}
+                title="Resize Element"
+              />
+
+              {/* Delete Handle (top right corner) */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCanvasElements(canvasElements.filter(item => item.id !== el.id));
+                  setSelectedElementId(null);
+                }}
+                className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
+                title="Delete Element"
+              >
+                ×
+              </button>
+            </>
+          )}
+        </div>
+      ));
   };
 
   return (
@@ -1124,21 +1303,21 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Format</span>
             <div className="flex items-center border border-hairline rounded-md h-8 bg-canvas overflow-hidden">
               <button
-                onClick={() => setIsBold(!isBold)}
+                onClick={() => handleToggleFormat('**')}
                 className={`px-3 h-full font-bold border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Bold Handwriting"
               >
                 B
               </button>
               <button
-                onClick={() => setIsItalic(!isItalic)}
+                onClick={() => handleToggleFormat('*')}
                 className={`px-3 h-full italic border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Italic (Slant)"
               >
                 I
               </button>
               <button
-                onClick={() => setIsUnderline(!isUnderline)}
+                onClick={() => handleToggleFormat('__')}
                 className={`px-3 h-full underline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Underline"
               >
@@ -1215,7 +1394,7 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
           <div className="flex items-center bg-canvas-soft-2 p-0.5 rounded-md border border-hairline h-8 text-[11px]">
             <button
               onClick={() => setEditMode('edit')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' && activePanel !== 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Edit Paper
             </button>
@@ -1224,9 +1403,19 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
                 setEditMode('preview');
                 triggerRender();
               }}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' && activePanel !== 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Realism Preview
+            </button>
+            <button
+              onClick={() => {
+                setEditMode('preview');
+                setActivePanel('insert');
+                triggerRender();
+              }}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' && activePanel === 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+            >
+              Insert Elements
             </button>
           </div>
         </div>
@@ -1245,41 +1434,174 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
           >
             {editMode === 'edit' ? (
               /* Inline Editable Textarea styled exactly like ruled notebook paper */
-              <textarea
-                value={text}
-                onChange={(e) => handleTextChange(e.target.value)}
-                placeholder="Type or paste your text directly on the page. All edits are saved instantly..."
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '100%',
-                  height: '100%',
-                  paddingTop: `${margins.top * scale}px`,
-                  paddingBottom: `${margins.bottom * scale}px`,
-                  paddingLeft: `${(margins.left + 6) * scale}px`,
-                  paddingRight: `${margins.right * scale}px`,
-                  fontSize: `${fontSize * scale}px`,
-                  lineHeight: paperStyle === 'plain'
-                    ? `${fontSize * lineHeight * scale}px`
-                    : `${gridSize * scale}px`,
-                  color: inkColor,
-                  fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
-                  textAlign: alignment as any,
-                  border: 'none',
-                  outline: 'none',
-                  resize: 'none',
-                  letterSpacing: `${letterSpacing * scale}px`,
-                  wordSpacing: `${wordSpacing * scale}px`,
-                  fontWeight: isBold ? 'bold' : 'normal',
-                  fontStyle: isItalic ? 'italic' : 'normal',
-                  textDecoration: isUnderline ? 'underline' : 'none',
-                  backgroundAttachment: 'local',
-                  overflowY: 'auto',
-                  ...getPaperBackgroundStyle()
-                }}
-                className="select-text focus:outline-none placeholder:text-gray-300 transition-colors"
-              />
+              <div className="relative w-full h-full">
+                {/* Overlay standard headers if not assignment header */}
+                {!isAssignmentHeaderEnabled && (headerLeft || headerCenter || headerRight) && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${margins.top * scale}px`,
+                      paddingLeft: `${margins.left * scale}px`,
+                      paddingRight: `${margins.right * scale}px`,
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      paddingBottom: `${fontSize * 0.4 * scale}px`,
+                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                      fontSize: `${fontSize * 0.7 * scale}px`,
+                      color: inkColor,
+                      opacity: 0.8,
+                      zIndex: 15
+                    }}
+                    className="select-none font-mono"
+                  >
+                    <div className="w-1/3 text-left truncate">{headerLeft}</div>
+                    <div className="w-1/3 text-center truncate">{headerCenter}</div>
+                    <div className="w-1/3 text-right truncate">{headerRight}</div>
+                  </div>
+                )}
+
+                {/* Overlay Assignment Header */}
+                {isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0 && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: `${margins.top * scale}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${(Math.max(
+                        assignmentFields.filter(f => f.alignment === 'left').length,
+                        assignmentFields.filter(f => f.alignment === 'right').length
+                      ) + 1) * gridSize * scale}px`,
+                      paddingLeft: `${(margins.left + lineMarginPadding) * scale}px`,
+                      paddingRight: `${margins.right * scale}px`,
+                      pointerEvents: 'none',
+                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                      fontSize: `${fontSize * 0.95 * scale}px`,
+                      color: inkColor,
+                      opacity: 0.9,
+                      zIndex: 15,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      paddingBottom: `${8 * scale}px`
+                    }}
+                    className="select-none font-mono"
+                  >
+                    {/* Render fields row by row */}
+                    {(() => {
+                      const leftFields = assignmentFields.filter(f => f.alignment === 'left');
+                      const rightFields = assignmentFields.filter(f => f.alignment === 'right');
+                      const maxRows = Math.max(leftFields.length, rightFields.length);
+                      const rows = [];
+                      for (let r = 0; r < maxRows; r++) {
+                        rows.push(
+                          <div 
+                            key={r} 
+                            className="flex justify-between" 
+                            style={{ height: `${gridSize * scale}px`, lineHeight: `${gridSize * scale}px` }}
+                          >
+                            <span className="truncate">
+                              {leftFields[r] ? `${leftFields[r].label}: ${leftFields[r].value || '____________________'}` : ''}
+                            </span>
+                            <span className="truncate pr-4 text-right">
+                              {rightFields[r] ? `${rightFields[r].label}: ${rightFields[r].value || '_________'}` : ''}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return rows;
+                    })()}
+
+                    {/* Divider Line on the last ruled line */}
+                    <div 
+                      className="absolute left-0 right-0 border-t-2 border-double border-[#ff8a8a]" 
+                      style={{ 
+                        top: `${Math.max(
+                          assignmentFields.filter(f => f.alignment === 'left').length,
+                          assignmentFields.filter(f => f.alignment === 'right').length
+                        ) * gridSize * scale}px`,
+                        left: `${margins.left * scale}px`,
+                        right: `${margins.right * scale}px`
+                      }} 
+                    />
+                  </div>
+                )}
+
+                {/* Overlay Footers */}
+                {(footerLeft || footerCenter || footerRight) && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${margins.bottom * scale}px`,
+                      paddingLeft: `${margins.left * scale}px`,
+                      paddingRight: `${margins.right * scale}px`,
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      paddingTop: `${fontSize * 0.4 * scale}px`,
+                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                      fontSize: `${fontSize * 0.7 * scale}px`,
+                      color: inkColor,
+                      opacity: 0.8,
+                      zIndex: 15
+                    }}
+                    className="select-none font-mono"
+                  >
+                    <div className="w-1/3 text-left truncate">{footerLeft.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
+                    <div className="w-1/3 text-center truncate">{footerCenter.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
+                    <div className="w-1/3 text-right truncate">{footerRight.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
+                  </div>
+                )}
+
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  placeholder="Type or paste your text directly on the page. All edits are saved instantly..."
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    paddingTop: `${(margins.top + (isAssignmentHeaderEnabled ? (Math.max(
+                      assignmentFields.filter(f => f.alignment === 'left').length,
+                      assignmentFields.filter(f => f.alignment === 'right').length
+                    ) + 1) * (gridSize || 30) : 0)) * scale}px`,
+                    paddingBottom: `${margins.bottom * scale}px`,
+                    paddingLeft: `${(margins.left + lineMarginPadding) * scale}px`,
+                    paddingRight: `${margins.right * scale}px`,
+                    fontSize: `${fontSize * scale}px`,
+                    lineHeight: paperStyle === 'plain'
+                      ? `${fontSize * lineHeight * scale}px`
+                      : `${gridSize * scale}px`,
+                    color: inkColor,
+                    fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                    textAlign: alignment as any,
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    letterSpacing: `${letterSpacing * scale}px`,
+                    wordSpacing: `${wordSpacing * scale}px`,
+                    fontWeight: isBold ? 'bold' : 'normal',
+                    fontStyle: isItalic ? 'italic' : 'normal',
+                    textDecoration: isUnderline ? 'underline' : 'none',
+                    backgroundAttachment: 'local',
+                    overflowY: 'auto',
+                    ...getPaperBackgroundStyle()
+                  }}
+                  className="select-text focus:outline-none placeholder:text-gray-300 transition-colors"
+                />
+                <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+                  {renderElementsOverlay(true)}
+                </div>
+              </div>
             ) : (
               /* Realistic handwriting preview from worker */
               <div className="relative w-full h-full">
@@ -1740,6 +2062,87 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
               <div className="space-y-4">
                 <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Margins & Header Settings</h3>
                 
+                {isAssignmentMode && (
+                  <div className="space-y-3 border-b border-hairline pb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="block font-bold text-primary text-[10px] uppercase">Assignment Cover Header</span>
+                      <input
+                        type="checkbox"
+                        checked={isAssignmentHeaderEnabled}
+                        onChange={(e) => setIsAssignmentHeaderEnabled(e.target.checked)}
+                        className="accent-primary w-4 h-4 cursor-pointer"
+                      />
+                    </div>
+                    {isAssignmentHeaderEnabled && (
+                      <div className="space-y-3 text-[10px] font-mono">
+                        {assignmentFields.map((field, index) => (
+                          <div key={field.id} className="p-2 border border-hairline bg-canvas-soft rounded space-y-2">
+                            <div className="flex items-center justify-between gap-1">
+                              <input
+                                type="text"
+                                value={field.label}
+                                onChange={(e) => {
+                                  const nextFields = [...assignmentFields];
+                                  nextFields[index] = { ...field, label: e.target.value };
+                                  setAssignmentFields(nextFields);
+                                }}
+                                placeholder="Field Label"
+                                className="font-bold bg-transparent border-b border-hairline focus:border-hairline-strong outline-none text-xs w-[60%] py-0.5 text-primary"
+                              />
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={field.alignment}
+                                  onChange={(e) => {
+                                    const nextFields = [...assignmentFields];
+                                    nextFields[index] = { ...field, alignment: e.target.value as 'left' | 'right' };
+                                    setAssignmentFields(nextFields);
+                                  }}
+                                  className="bg-canvas border border-hairline rounded text-[9px] py-0.5 px-1 cursor-pointer outline-none text-body"
+                                >
+                                  <option value="left">Left Col</option>
+                                  <option value="right">Right Col</option>
+                                </select>
+                                <button
+                                  onClick={() => {
+                                    setAssignmentFields(assignmentFields.filter(f => f.id !== field.id));
+                                  }}
+                                  className="text-red-500 hover:text-red-600 font-bold px-1.5 text-xs cursor-pointer"
+                                  title="Delete Field"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                            <input
+                              type="text"
+                              value={field.value}
+                              onChange={(e) => {
+                                const nextFields = [...assignmentFields];
+                                nextFields[index] = { ...field, value: e.target.value };
+                                setAssignmentFields(nextFields);
+                              }}
+                              placeholder={`Enter ${field.label || 'value'}...`}
+                              className="input-field h-7 bg-canvas text-xs w-full"
+                            />
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const newId = String(Date.now());
+                            setAssignmentFields([
+                              ...assignmentFields,
+                              { id: newId, label: 'Custom Field', value: '', alignment: 'left' }
+                            ]);
+                          }}
+                          className="btn-secondary h-7 text-[10px] w-full cursor-pointer flex items-center justify-center font-bold"
+                        >
+                          + Add Custom Field
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2.5 font-mono text-[10px]">
                   <div>
                     <span>Top Margin (px)</span>
@@ -1779,26 +2182,99 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-hairline pt-3 font-mono">
-                  <div>
-                    <span>Page Header Fields</span>
+                <div className="space-y-1.5 font-mono text-[10px] border-t border-hairline pt-3">
+                  <div className="flex justify-between font-bold text-primary uppercase">
+                    <span>Left Margin Padding</span>
+                    <span>{lineMarginPadding}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={lineMarginPadding}
+                    onChange={(e) => setLineMarginPadding(parseInt(e.target.value) || 0)}
+                    className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                  />
+                  <span className="text-[9px] text-mute">Adjust spacing between vertical red margin line and text start.</span>
+                </div>
+
+                <div className="space-y-3 border-t border-hairline pt-3 font-mono">
+                  <span className="block font-bold text-primary text-[10px] uppercase">Page Header</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <span className="text-[9px] text-mute">Left</span>
+                      <input
+                        type="text"
+                        value={headerLeft}
+                        onChange={(e) => setHeaderLeft(e.target.value)}
+                        placeholder="Name: ____"
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-mute">Center</span>
+                      <input
+                        type="text"
+                        value={headerCenter}
+                        onChange={(e) => setHeaderCenter(e.target.value)}
+                        placeholder="Title"
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-mute">Right</span>
+                      <input
+                        type="text"
+                        value={headerRight}
+                        onChange={(e) => setHeaderRight(e.target.value)}
+                        placeholder="Date: ____"
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1 text-[10px]">
+                    <span className="text-mute">Same Header on All Pages</span>
                     <input
-                      type="text"
-                      value={pageHeader}
-                      onChange={(e) => setPageHeader(e.target.value)}
-                      placeholder="e.g. Name: ____________ Date: ________"
-                      className="input-field h-8 bg-canvas text-xs mt-1"
+                      type="checkbox"
+                      checked={sameHeaderAllPages}
+                      onChange={(e) => setSameHeaderAllPages(e.target.checked)}
+                      className="accent-primary w-4 h-4 cursor-pointer"
                     />
                   </div>
-                  <div>
-                    <span>Page Footer Template</span>
-                    <input
-                      type="text"
-                      value={pageFooter}
-                      onChange={(e) => setPageFooter(e.target.value)}
-                      placeholder="e.g. Page {page} of {pages}"
-                      className="input-field h-8 bg-canvas text-xs mt-1"
-                    />
+
+                  <span className="block font-bold text-primary text-[10px] uppercase pt-2 border-t border-hairline/50">Page Footer</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <span className="text-[9px] text-mute">Left</span>
+                      <input
+                        type="text"
+                        value={footerLeft}
+                        onChange={(e) => setFooterLeft(e.target.value)}
+                        placeholder=""
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-mute">Center</span>
+                      <input
+                        type="text"
+                        value={footerCenter}
+                        onChange={(e) => setFooterCenter(e.target.value)}
+                        placeholder=""
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-mute">Right</span>
+                      <input
+                        type="text"
+                        value={footerRight}
+                        onChange={(e) => setFooterRight(e.target.value)}
+                        placeholder="Page {page}"
+                        className="input-field h-8 bg-canvas text-xs mt-0.5"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1842,7 +2318,7 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
                           height: 8,
                           dataUrl: url
                         };
-                        setCanvasElements([...canvasElements, newElement]);
+                        setCanvasElements(prev => [...prev, newElement]);
                         showToast('LaTeX Formula Inserted!');
                       } else {
                         showToast('Rendering error!', true);
@@ -1953,7 +2429,7 @@ export default function ConverterApp({ defaultFont, defaultPaper }: { defaultFon
                           height: 25,
                           dataUrl: url
                         };
-                        setCanvasElements([...canvasElements, newElement]);
+                        setCanvasElements(prev => [...prev, newElement]);
                         showToast('Grid Table inserted!');
                       }
                     }}

@@ -14,13 +14,6 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-  <!-- Cursive Text Converter -->
-  <url>
-    <loc>https://scribblecraft.com/text-to-cursive</loc>
-    <lastmod>2026-06-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
   <!-- Signature Generator -->
   <url>
     <loc>https://scribblecraft.com/signature-generator</loc>
