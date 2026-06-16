@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const creditsSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  'name': 'Website Credits - Text to Handwriting',
+  'description': 'Credits and open source libraries utilized in the creation of the Text to Handwriting Converter web app.'
+};
+---
+
+<BaseLayout
+  title="Website Credits - Text to Handwriting"
+  description="Credits and acknowledgements for open source libraries, typography designers, icons, and frameworks supporting Text to Handwriting."
+  activeTab="credits"
+  schema={creditsSchema}
+>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Website Credits</h1>
+      <p class="text-xs text-mute font-mono mt-1">Acknowledgements & Technology Stack Stack.</p>
+    </div>
+
+    <div class="space-y-6 text-xs md:text-sm text-body leading-relaxed">
+      <p>
+        The **Text to Handwriting** platform is built upon a modern, fast client-side web stack. We would like to express our gratitude to the authors, maintainers, and creators of the open-source libraries and digital assets that make this tool possible.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">1. Core Framework & Bundling</h2>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Astro:</strong> Used for lightning-fast HTML generation, component island rendering, and building structured SEO routes.</li>
+        <li><strong>React:</strong> Powering the interactive converter app state, drawing canvas components, and settings dashboards.</li>
+        <li><strong>Vite & Tailwind CSS v4:</strong> Providing ultra-fast compile steps and modern, responsive styling variables.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">2. Open Source Libraries</h2>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>KaTeX:</strong> The math rendering engine utilized to parse and compile LaTeX expressions into premium-grade mathematical layouts.</li>
+        <li><strong>PDF.js:</strong> The browser-based PDF reader engine used to extract textual contents dynamically from user-uploaded PDFs.</li>
+        <li><strong>pdf-lib:</strong> Facilitating the compilation and generation of highly compressed multi-page PDF files locally.</li>
+        <li><strong>JSZip:</strong> Powering the offline compilation of generated notebook PNG images into zipped folder downloads.</li>
+        <li><strong>html-to-image:</strong> Compiling interactive CSS/HTML components into clean canvas PNG bitmaps.</li>
+        <li><strong>Lucide React:</strong> Powering the modern, responsive iconography used across settings tabs and actions.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">3. Typography Credits</h2>
+      <p>
+        We rely on the talented designers who contributed to Google Fonts. Special thanks for the handwriting typefaces featured on our styling menus:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><em>Caveat & Caveat Brush</em> by Impallari Type</li>
+        <li><em>Architects Daughter</em> by Kimberly Geswein</li>
+        <li><em>Patrick Hand</em> by Patrick Wagesreiter</li>
+        <li><em>Indie Flower</em> by Kimberly Geswein</li>
+        <li><em>Dancing Script & Pacifico</em> by Pablo Impallari</li>
+        <li><em>Sacramento</em> by Astigmatic</li>
+        <li><em>Reenie Beanie</em> by James Grieshaber</li>
+        <li><em>Shadows Into Light</em> by Kimberly Geswein</li>
+        <li><em>Gochi Hand</em> by Huerta Tipográfica</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">4. Development & Design</h2>
+      <p>
+        This web application is designed and developed with focus on client-side privacy, printing-press fidelity (300 DPI support), and dynamic browser-worker task processing.
+      </p>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>

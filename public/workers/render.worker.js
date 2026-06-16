@@ -116,6 +116,28 @@ function parseTextToWords(text) {
   return words;
 }
 
+function checkVerticalOverlapAndAdvanceY(currentY, pageIdx, elements, h, mTop, lineStep, scale) {
+  let y = currentY;
+  const pageElements = elements ? elements.filter(el => el.pageIndex === pageIdx && el.type !== 'sketch') : [];
+  const sortedElements = [...pageElements].sort((a, b) => a.y - b.y);
+  let advanced = false;
+  for (const el of sortedElements) {
+    const elY = (el.y / 100) * h;
+    const elH = (el.height / 100) * h;
+    const elBottom = elY + elH;
+    const padding = 12 * scale;
+    if (y + lineStep >= elY - padding && y - lineStep <= elBottom + padding) {
+      y = elBottom + padding;
+      y = mTop + Math.ceil((y - mTop) / lineStep) * lineStep;
+      advanced = true;
+    }
+  }
+  if (advanced) {
+    return checkVerticalOverlapAndAdvanceY(y, pageIdx, elements, h, mTop, lineStep, scale);
+  }
+  return y;
+}
+
 self.onmessage = async function(e) {
   const {
     text,
@@ -324,11 +346,14 @@ self.onmessage = async function(e) {
     }
 
     if (line.type === 'empty') {
+      currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
       if (currentPageLines.length > 0 && currentPageY + lineStep > h - mBottom) {
         pages.push(currentPageLines);
         currentPageLines = [];
         currentPageY = mTop + lineStep;
+        currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
       }
+      line.renderedY = currentPageY;
       currentPageLines.push(line);
       currentPageY += lineStep;
       continue;
@@ -338,15 +363,19 @@ self.onmessage = async function(e) {
     const lineSteps = Math.max(1, Math.ceil(lineMaxHeight / lineStep));
     const lineReservedHeight = lineSteps * lineStep;
 
+    currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
+
     if (currentPageLines.length > 0 && currentPageY + lineReservedHeight - lineStep > h - mBottom) {
       pages.push(currentPageLines);
       currentPageLines = [];
       currentPageY = mTop + lineStep;
+      currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
     }
 
     line.lineSteps = lineSteps;
     line.lineReservedHeight = lineReservedHeight;
     line.lineMaxHeight = lineMaxHeight;
+    line.renderedY = currentPageY + (lineSteps - 1) * lineStep;
 
     currentPageLines.push(line);
     currentPageY += lineReservedHeight;
@@ -489,11 +518,10 @@ self.onmessage = async function(e) {
     for (let l = 0; l < lines.length; l++) {
       const line = lines[l];
       if (line.type === 'empty') {
-        currentPageY += lineStep;
         continue;
       }
 
-      const baselineY = currentPageY + (line.lineSteps - 1) * lineStep;
+      const baselineY = line.renderedY;
       let startX = mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale;
 
       if (alignment === 'center') {
@@ -643,6 +671,8 @@ self.onmessage = async function(e) {
         const elY = (el.y / 100) * h;
         const elW = (el.width / 100) * w;
         const elH = (el.height / 100) * h;
+        ctx.fillStyle = paperStyle === 'legal' ? '#fdfbbe' : '#ffffff';
+        ctx.fillRect(elX, elY, elW, elH);
         ctx.drawImage(el.bitmap, elX, elY, elW, elH);
         ctx.restore();
       }

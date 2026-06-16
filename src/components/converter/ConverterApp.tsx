@@ -9,6 +9,84 @@ import * as htmlToImage from 'html-to-image';
 import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset } from '../../lib/fonts';
 import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
 
+// Cache for KaTeX CSS with absolute font URLs to ensure correct rendering in html-to-image
+let cachedKatexCss = '';
+const getKatexCss = async () => {
+  if (cachedKatexCss) return cachedKatexCss;
+  try {
+    const response = await fetch('https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css');
+    let cssText = await response.text();
+    cssText = cssText.replace(/url\(fonts\//g, 'url(https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/fonts/');
+    cachedKatexCss = cssText;
+    return cssText;
+  } catch (err) {
+    console.error('Failed to fetch KaTeX CSS', err);
+    return '';
+  }
+};
+
+// Dynamic client-side PDF.js loader
+const loadPdfJs = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) {
+      resolve((window as any).pdfjsLib);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(pdfjsLib);
+    };
+    script.onerror = () => reject(new Error('Failed to load PDF.js'));
+    document.head.appendChild(script);
+  });
+};
+
+// Client-side text extraction preserving lines and page breaks
+const extractTextFromPdf = async (file: File): Promise<string> => {
+  const pdfjsLib = await loadPdfJs();
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = '';
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const items = textContent.items as any[];
+    
+    // Group items by line based on their vertical Y coordinate
+    const linesMap: Record<number, any[]> = {};
+    items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      if (!linesMap[y]) {
+        linesMap[y] = [];
+      }
+      linesMap[y].push(item);
+    });
+    
+    // Sort lines from top to bottom
+    const sortedY = Object.keys(linesMap)
+      .map(Number)
+      .sort((a, b) => b - a);
+      
+    let pageText = '';
+    sortedY.forEach(y => {
+      // Sort items on the same line from left to right
+      const lineItems = linesMap[y].sort((a, b) => a.transform[4] - b.transform[4]);
+      const lineText = lineItems.map(item => item.str).join(' ');
+      pageText += lineText + '\n';
+    });
+    
+    if (i > 1) {
+      fullText += '\n---page break---\n';
+    }
+    fullText += pageText;
+  }
+  return fullText;
+};
+
 interface Preset {
   name: string;
   fontName: string;
@@ -220,14 +298,23 @@ const drawFormulaToDataUrl = async (
   document.body.appendChild(container);
 
   try {
-    katex.render(latex, container, {
+    const mathContainer = document.createElement('div');
+    katex.render(latex, mathContainer, {
       throwOnError: false,
       displayMode: true
     });
+    container.appendChild(mathContainer);
+
+    const css = await getKatexCss();
+    if (css) {
+      const styleEl = document.createElement('style');
+      styleEl.textContent = css;
+      container.appendChild(styleEl);
+    }
 
     await document.fonts.ready;
     // Wait for browser painting & font rendering
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     const dataUrl = await htmlToImage.toPng(container, {
       backgroundColor: 'transparent',
@@ -387,7 +474,7 @@ export default function ConverterApp({
 
   // Layout toggles
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activePanel, setActivePanel] = useState<'fonts' | 'paper' | 'realism' | 'header' | 'insert'>('fonts');
+  const [activePanel, setActivePanel] = useState<'fonts' | 'paper' | 'realism' | 'header'>('fonts');
   const [presets, setPresets] = useState<Record<string, Preset>>(DEFAULT_PRESETS);
   const [newPresetName, setNewPresetName] = useState('');
 
@@ -427,6 +514,35 @@ export default function ConverterApp({
   const [isUnderline, setIsUnderline] = useState(false);
   const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
   const [scale, setScale] = useState(1);
+
+  // New Modals & PDF Import states
+  const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [isPdfImporting, setIsPdfImporting] = useState(false);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
+
+  const formulaPreviewRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isFormulaModalOpen && formulaPreviewRef.current) {
+      try {
+        katex.render(latexInput, formulaPreviewRef.current, {
+          throwOnError: false,
+          displayMode: true
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }, [latexInput, isFormulaModalOpen]);
+
+  const [tablePreviewUrl, setTablePreviewUrl] = useState('');
+  useEffect(() => {
+    if (isTableModalOpen) {
+      drawTableToDataUrl(tableCells, fontFamily, inkColor).then(url => {
+        setTablePreviewUrl(url);
+      });
+    }
+  }, [tableCells, fontFamily, inkColor, isTableModalOpen]);
 
   const [customFonts, setCustomFonts] = useState<Array<{ name: string; family: string; buffer: ArrayBuffer }>>([]);
 
@@ -1241,7 +1357,7 @@ export default function ConverterApp({
             border: selectedElementId === el.id
               ? '1.5px dashed #0070f3'
               : isInteractive ? '1.5px dashed #cbd5e1' : 'none',
-            backgroundColor: isInteractive ? 'rgba(255, 255, 255, 0.75)' : 'transparent',
+            backgroundColor: paperStyle === 'legal' ? '#fdfbbe' : '#ffffff',
             pointerEvents: isInteractive ? 'auto' : 'none',
             zIndex: 10
           }}
@@ -1356,11 +1472,145 @@ export default function ConverterApp({
               </button>
               <button
                 onClick={() => handleToggleFormat('__')}
-                className={`px-3 h-full underline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                className={`px-3 h-full underline border-r border-hairline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Underline"
               >
                 U
               </button>
+              <button
+                onClick={() => insertTextAtCursor('\n• ')}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
+                title="Bullet List"
+              >
+                • List
+              </button>
+              <button
+                onClick={() => insertTextAtCursor('\n1. ')}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
+                title="Numbered List"
+              >
+                1. List
+              </button>
+              <button
+                onClick={() => setLineMarginPadding(prev => Math.max(0, prev - 10))}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                title="Outdent"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => {
+                  const nextAlign = alignment === 'left' ? 'center' : alignment === 'center' ? 'right' : 'left';
+                  setAlignment(nextAlign);
+                }}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                title="Alignment"
+              >
+                ↕
+              </button>
+              <button
+                onClick={() => setLineMarginPadding(prev => Math.min(150, prev + 10))}
+                className="px-3 h-full transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                title="Indent"
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          {/* Insert Elements Toolbar */}
+          <div className="flex flex-col">
+            <span className="text-[10px] text-mute font-bold uppercase mb-1">Insert</span>
+            <div className="flex items-center border border-hairline rounded-md h-8 bg-canvas overflow-hidden">
+              <button
+                onClick={() => {
+                  const fileInput = document.createElement('input');
+                  fileInput.type = 'file';
+                  fileInput.accept = 'image/*';
+                  fileInput.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        const newElement: CanvasElement = {
+                          id: String(Date.now()),
+                          type: 'image',
+                          pageIndex: previewPageIdx,
+                          x: 25,
+                          y: 25,
+                          width: 35,
+                          height: 25,
+                          dataUrl
+                        };
+                        setCanvasElements(prev => [...prev, newElement]);
+                        showToast('Image inserted!');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  };
+                  fileInput.click();
+                }}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert Image"
+              >
+                🌅 Image
+              </button>
+              <button
+                onClick={() => setIsTableModalOpen(true)}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert Hand-Drawn Table"
+              >
+                田 Table
+              </button>
+              <button
+                onClick={() => setIsFormulaModalOpen(true)}
+                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert LaTeX Formula"
+              >
+                Σ Formula
+              </button>
+              <button
+                onClick={() => {
+                  setIsDrawingMode(!isDrawingMode);
+                  if (!isDrawingMode) setEditMode('preview');
+                }}
+                className={`px-3 h-full border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
+                title="Enable Sketch Drawing"
+              >
+                ✏️ Sketch
+              </button>
+              <button
+                disabled={isPdfImporting}
+                onClick={() => pdfFileInputRef.current?.click()}
+                className="px-3 h-full transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
+                title="Import Text from PDF"
+              >
+                {isPdfImporting ? '⏳...' : 'Import PDF'}
+              </button>
+              <input
+                type="file"
+                ref={pdfFileInputRef}
+                accept=".pdf"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setIsPdfImporting(true);
+                  try {
+                    showToast('Extracting text from PDF...');
+                    const textContent = await extractTextFromPdf(file);
+                    insertTextAtCursor(textContent);
+                    showToast('PDF text imported successfully!');
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Failed to parse PDF.', true);
+                  } finally {
+                    setIsPdfImporting(false);
+                    if (e.target) e.target.value = '';
+                  }
+                }}
+                className="hidden"
+              />
             </div>
           </div>
 
@@ -1432,7 +1682,7 @@ export default function ConverterApp({
           <div className="flex items-center bg-canvas-soft-2 p-0.5 rounded-md border border-hairline h-8 text-[11px]">
             <button
               onClick={() => setEditMode('edit')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' && activePanel !== 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Edit Paper
             </button>
@@ -1441,19 +1691,9 @@ export default function ConverterApp({
                 setEditMode('preview');
                 triggerRender();
               }}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' && activePanel !== 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Realism Preview
-            </button>
-            <button
-              onClick={() => {
-                setEditMode('preview');
-                setActivePanel('insert');
-                triggerRender();
-              }}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' && activePanel === 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
-            >
-              Insert Elements
             </button>
           </div>
         </div>
@@ -1480,6 +1720,8 @@ export default function ConverterApp({
               <span>Interactive Sheet</span>
             )}
           </div>
+
+
 
           {/* A4 Bounding Sheet Container */}
           <div
@@ -1695,7 +1937,8 @@ export default function ConverterApp({
                               top: `${el.y}%`,
                               width: `${el.width}%`,
                               height: `${el.height}%`,
-                              border: selectedElementId === el.id ? '1.5px dashed #0070f3' : '1px dashed transparent'
+                              border: selectedElementId === el.id ? '1.5px dashed #0070f3' : '1px dashed transparent',
+                              backgroundColor: paperStyle === 'legal' ? '#fdfbbe' : '#ffffff'
                             }}
                             className="group hover:border-hairline-strong pointer-events-auto"
                           >
@@ -1857,7 +2100,7 @@ export default function ConverterApp({
         <div className="w-full lg:w-[35%] flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm min-h-[500px]">
 
           {/* Sidebar tabs */}
-          <div className="grid grid-cols-5 gap-1 bg-canvas-soft-2 p-1 rounded-md text-[10px] font-mono mb-4 text-center">
+          <div className="grid grid-cols-4 gap-1 bg-canvas-soft-2 p-1 rounded-md text-[10px] font-mono mb-4 text-center">
             <button
               onClick={() => setActivePanel('fonts')}
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'fonts' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
@@ -1875,12 +2118,6 @@ export default function ConverterApp({
               className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'header' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
             >
               Headers
-            </button>
-            <button
-              onClick={() => setActivePanel('insert')}
-              className={`py-1.5 rounded transition-all cursor-pointer ${activePanel === 'insert' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
-            >
-              Insert
             </button>
             <button
               onClick={() => setActivePanel('paper')}
@@ -2356,166 +2593,6 @@ export default function ConverterApp({
               </div>
             )}
 
-            {/* Panel: Insert Elements */}
-            {activePanel === 'insert' && (
-              <div className="space-y-4">
-                <h3 className="font-mono font-bold uppercase text-primary border-b border-hairline pb-1 text-[10px]">Insert Media & Overlays</h3>
-
-                <div>
-                  <span className="block font-mono font-bold text-primary text-[10px] uppercase mb-1">Insert Image / Signature</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="text-xs font-mono file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-mono file:bg-canvas-soft-2 file:text-body hover:file:bg-hairline w-full"
-                  />
-                </div>
-
-                <div className="border-t border-hairline pt-3 font-mono">
-                  <span className="block font-bold text-primary text-[10px] uppercase mb-1">LaTeX Math Formula</span>
-                  <textarea
-                    value={latexInput}
-                    onChange={(e) => setLatexInput(e.target.value)}
-                    placeholder="\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}"
-                    className="w-full h-16 border border-hairline bg-canvas p-2 rounded text-xs outline-none focus:border-hairline-strong resize-none"
-                  />
-                  <button
-                    onClick={async () => {
-                      showToast('Rendering equation...');
-                      const url = await drawFormulaToDataUrl(latexInput, inkColor);
-                      if (url) {
-                        const newElement: CanvasElement = {
-                          id: String(Date.now()),
-                          type: 'formula',
-                          pageIndex: previewPageIdx,
-                          x: 25,
-                          y: 35,
-                          width: 35,
-                          height: 8,
-                          dataUrl: url
-                        };
-                        setCanvasElements(prev => [...prev, newElement]);
-                        showToast('LaTeX Formula Inserted!');
-                      } else {
-                        showToast('Rendering error!', true);
-                      }
-                    }}
-                    className="btn-secondary h-7 text-[10px] mt-1.5 w-full cursor-pointer flex items-center justify-center font-bold"
-                  >
-                    Insert LaTeX Equation
-                  </button>
-                </div>
-
-                <div className="border-t border-hairline pt-3">
-                  <span className="block font-mono font-bold text-primary text-[10px] uppercase mb-2">Sketch Annotation Layer</span>
-                  <button
-                    onClick={() => {
-                      setIsDrawingMode(!isDrawingMode);
-                      if (!isDrawingMode) setEditMode('preview');
-                    }}
-                    className={`w-full h-7 text-[10px] font-mono rounded border flex items-center justify-center space-x-1 transition-colors cursor-pointer ${isDrawingMode
-                      ? 'bg-link text-white border-link font-semibold animate-pulse'
-                      : 'bg-canvas hover:bg-canvas-soft border-hairline text-body'
-                      }`}
-                  >
-                    <span>{isDrawingMode ? 'Drawing Active (Click to Complete)' : 'Enable Sketch Drawing'}</span>
-                  </button>
-                </div>
-
-                <div className="border-t border-hairline pt-3 font-mono">
-                  <span className="block font-bold text-primary text-[10px] uppercase mb-1">Hand-Drawn Grid Table</span>
-                  <div className="grid grid-cols-2 gap-2 text-[9px] mb-1.5">
-                    <div>
-                      <span>Rows:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={tableRowsInput}
-                        onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          setTableRowsInput(val);
-                          const newCells = Array(val).fill(null).map((_, rIdx) =>
-                            Array(tableColsInput).fill(null).map((_, cIdx) =>
-                              (tableCells[rIdx]?.[cIdx] || '')
-                            )
-                          );
-                          setTableCells(newCells);
-                        }}
-                        className="input-field h-6 bg-canvas text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span>Columns:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={tableColsInput}
-                        onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          setTableColsInput(val);
-                          const newCells = Array(tableRowsInput).fill(null).map((_, rIdx) =>
-                            Array(val).fill(null).map((_, cIdx) =>
-                              (tableCells[rIdx]?.[cIdx] || '')
-                            )
-                          );
-                          setTableCells(newCells);
-                        }}
-                        className="input-field h-6 bg-canvas text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="max-h-[80px] overflow-y-auto border border-hairline rounded p-1 space-y-1 bg-canvas-soft-2/50 mb-2">
-                    {tableCells.map((row, rIdx) => (
-                      <div key={rIdx} className="flex gap-1">
-                        {row.map((cell, cIdx) => (
-                          <input
-                            key={cIdx}
-                            type="text"
-                            value={cell}
-                            onChange={(e) => {
-                              const newCells = [...tableCells];
-                              newCells[rIdx] = [...newCells[rIdx]];
-                              newCells[rIdx][cIdx] = e.target.value;
-                              setTableCells(newCells);
-                            }}
-                            placeholder={`R${rIdx + 1}C${cIdx + 1}`}
-                            className="w-full border border-hairline bg-canvas p-1 rounded font-mono text-[8px] outline-none"
-                          />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={async () => {
-                      showToast('Generating hand-drawn table...');
-                      const url = await drawTableToDataUrl(tableCells, fontFamily, inkColor);
-                      if (url) {
-                        const newElement: CanvasElement = {
-                          id: String(Date.now()),
-                          type: 'table',
-                          pageIndex: previewPageIdx,
-                          x: 15,
-                          y: 40,
-                          width: 50,
-                          height: 25,
-                          dataUrl: url
-                        };
-                        setCanvasElements(prev => [...prev, newElement]);
-                        showToast('Grid Table inserted!');
-                      }
-                    }}
-                    className="btn-secondary h-7 text-[10px] w-full cursor-pointer flex items-center justify-center font-bold"
-                  >
-                    Draw & Insert Grid Table
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Panel: Presets & Layout loading */}
             {activePanel === 'paper' && (
               <div className="space-y-4">
@@ -2656,6 +2733,218 @@ export default function ConverterApp({
         </div>
 
       </div>
+
+      {/* LaTeX Formula Modal */}
+      {isFormulaModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-canvas border border-hairline-strong rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-hairline pb-2">
+              <h3 className="font-mono font-bold text-primary text-xs uppercase flex items-center gap-1.5">
+                <span>Σ LaTeX Math Formula</span>
+              </h3>
+              <button
+                onClick={() => setIsFormulaModalOpen(false)}
+                className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-3 font-mono text-xs text-body">
+              <div className="space-y-1">
+                <span>Enter LaTeX Code:</span>
+                <textarea
+                  value={latexInput}
+                  onChange={(e) => setLatexInput(e.target.value)}
+                  placeholder="\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}"
+                  className="w-full h-20 border border-hairline bg-canvas p-2 rounded text-xs outline-none focus:border-hairline-strong resize-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <span>Live Rendering Preview:</span>
+                <div 
+                  ref={formulaPreviewRef}
+                  className="border border-hairline bg-canvas-soft rounded p-3 min-h-[60px] flex items-center justify-center overflow-x-auto text-primary"
+                  style={{ color: inkColor }}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
+              <button
+                onClick={() => setIsFormulaModalOpen(false)}
+                className="btn-secondary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  showToast('Rendering equation...');
+                  setIsFormulaModalOpen(false);
+                  const url = await drawFormulaToDataUrl(latexInput, inkColor);
+                  if (url) {
+                    const newElement: CanvasElement = {
+                      id: String(Date.now()),
+                      type: 'formula',
+                      pageIndex: previewPageIdx,
+                      x: 25,
+                      y: 35,
+                      width: 35,
+                      height: 8,
+                      dataUrl: url
+                    };
+                    setCanvasElements(prev => [...prev, newElement]);
+                    showToast('LaTeX Formula Inserted!');
+                  } else {
+                    showToast('Rendering error!', true);
+                  }
+                }}
+                className="btn-primary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
+              >
+                Insert Formula
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table Builder Modal */}
+      {isTableModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-canvas border border-hairline-strong rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-hairline pb-2">
+              <h3 className="font-mono font-bold text-primary text-xs uppercase flex items-center gap-1.5">
+                <span>田 Hand-Drawn Grid Table</span>
+              </h3>
+              <button
+                onClick={() => setIsTableModalOpen(false)}
+                className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 font-mono text-xs text-body">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span>Rows:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={tableRowsInput}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      setTableRowsInput(val);
+                      const newCells = Array(val).fill(null).map((_, rIdx) =>
+                        Array(tableColsInput).fill(null).map((_, cIdx) =>
+                          (tableCells[rIdx]?.[cIdx] || '')
+                        )
+                      );
+                      setTableCells(newCells);
+                    }}
+                    className="input-field h-8 bg-canvas text-xs"
+                  />
+                </div>
+                <div>
+                  <span>Columns:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={tableColsInput}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      setTableColsInput(val);
+                      const newCells = Array(tableRowsInput).fill(null).map((_, rIdx) =>
+                        Array(val).fill(null).map((_, cIdx) =>
+                          (tableCells[rIdx]?.[cIdx] || '')
+                        )
+                      );
+                      setTableCells(newCells);
+                    }}
+                    className="input-field h-8 bg-canvas text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span>Edit Cell Content:</span>
+                <div className="max-h-[140px] overflow-y-auto border border-hairline rounded p-2 space-y-1 bg-canvas-soft-2/50">
+                  {tableCells.map((row, rIdx) => (
+                    <div key={rIdx} className="flex gap-1">
+                      {row.map((cell, cIdx) => (
+                        <input
+                          key={cIdx}
+                          type="text"
+                          value={cell}
+                          onChange={(e) => {
+                            const newCells = [...tableCells];
+                            newCells[rIdx] = [...newCells[rIdx]];
+                            newCells[rIdx][cIdx] = e.target.value;
+                            setTableCells(newCells);
+                          }}
+                          placeholder={`R${rIdx + 1}C${cIdx + 1}`}
+                          className="w-full border border-hairline bg-canvas p-1 rounded font-mono text-[9px] outline-none focus:border-hairline-strong text-primary"
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span>Live Rendering Preview:</span>
+                <div className="border border-hairline bg-canvas-soft rounded p-3 min-h-[100px] flex items-center justify-center overflow-auto bg-white">
+                  {tablePreviewUrl ? (
+                    <img 
+                      src={tablePreviewUrl} 
+                      alt="Wobbly Table Preview" 
+                      className="max-h-[160px] object-contain border border-dashed border-hairline"
+                    />
+                  ) : (
+                    <span className="text-mute">Generating preview...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
+              <button
+                onClick={() => setIsTableModalOpen(false)}
+                className="btn-secondary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  showToast('Generating hand-drawn table...');
+                  setIsTableModalOpen(false);
+                  const url = await drawTableToDataUrl(tableCells, fontFamily, inkColor);
+                  if (url) {
+                    const newElement: CanvasElement = {
+                      id: String(Date.now()),
+                      type: 'table',
+                      pageIndex: previewPageIdx,
+                      x: 15,
+                      y: 40,
+                      width: 50,
+                      height: 25,
+                      dataUrl: url
+                    };
+                    setCanvasElements(prev => [...prev, newElement]);
+                    showToast('Grid Table inserted!');
+                  }
+                }}
+                className="btn-primary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
+              >
+                Insert Table
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

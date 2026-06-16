@@ -73,6 +73,7 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhxA8W9JYM8tfybqhTJEnvhAdKGNiecLQsJyb3xRqypf0wyYBEE9tt1Ar9k" crossorigin="anonymous" />
 
     <!-- Primary SEO Meta Tags -->
     <title>{title}</title>
@@ -165,7 +166,7 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
       </div>
       <nav class="flex flex-col space-y-2 text-sm font-mono mb-8 overflow-y-auto max-h-[60vh]">
         <a href="/" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Text Converter</a>
-        <a href="/bulk-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Bulk Generator</a>
+        <a href="/bulk-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Bulk Handwriting Maker</a>
         <a href="/assignment-formatter" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Assignment Maker</a>
         <a href="/signature-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Signature Maker</a>
         <a href="/notebook-paper-generator" class="py-2 border-b border-hairline text-primary hover:pl-2 transition-all">Notebook Paper</a>
@@ -199,20 +200,19 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
             The premium text-to-handwriting platform. Generate highly realistic handwritten notes, custom signatures, school assignments, and printable notebook papers dynamically with our OffscreenCanvas worker engine.
           </p>
           <p class="text-xs text-mute font-mono">
-            © {new Date().getFullYear()} texttohandwriting.me
+            © 2020–2026 texttohandwriting.me. All Rights Reserved.
           </p>
         </div>
         <div>
           <h4 class="text-xs font-mono uppercase font-semibold text-primary mb-4 tracking-wider">Features</h4>
           <ul class="space-y-2 text-xs font-medium text-body">
-            <li><a href="/" class="hover:text-primary transition-colors">Single Text Converter</a></li>
+            <li><a href="/" class="hover:text-primary transition-colors">Home Text Converter</a></li>
             <li><a href="/bulk-generator" class="hover:text-primary transition-colors">Bulk Handwriting Maker</a></li>
             <li><a href="/assignment-formatter" class="hover:text-primary transition-colors">Assignment Maker</a></li>
             <li><a href="/signature-generator" class="hover:text-primary transition-colors">Signature Generator</a></li>
             <li><a href="/notebook-paper-generator" class="hover:text-primary transition-colors">Notebook Paper Maker</a></li>
             <li><a href="/handwriting-font-preview" class="hover:text-primary transition-colors">Font Showcase Preview</a></li>
             <li><a href="/text-to-cursive" class="hover:text-primary transition-colors">Cursive Converter</a></li>
-            <li><a href="/assignment-formatter" class="hover:text-primary transition-colors">Assignment Formatter</a></li>
           </ul>
         </div>
         <div>
@@ -220,8 +220,8 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
           <ul class="space-y-2 text-xs font-medium text-body">
             <li><a href="/faq" class="hover:text-primary transition-colors">Help & FAQ Hub</a></li>
             <li><a href="/about-us" class="hover:text-primary transition-colors">About Text to Handwriting</a></li>
-            <li><a href="/contact-us" class="hover:text-primary transition-colors">Contact Support</a></li>
-            <li><a href="/blog" class="hover:text-primary transition-colors">Writing Blog & Guides</a></li>
+            <li><a href="/contact-us" class="hover:text-primary transition-colors">Contact Us</a></li>
+            <li><a href="/blog" class="hover:text-primary transition-colors">Blog & Guides</a></li>
             <li><span class="text-mute font-mono text-[10px]">DPI: 300 (Print Quality)</span></li>
             <li><span class="text-mute font-mono text-[10px]">Processing: Client-side</span></li>
           </ul>
@@ -231,6 +231,9 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
           <ul class="space-y-2 text-xs font-medium text-body">
             <li><a href="/privacy-policy" class="hover:text-primary transition-colors">Privacy Policy</a></li>
             <li><a href="/terms-and-conditions" class="hover:text-primary transition-colors">Terms & Conditions</a></li>
+            <li><a href="/disclaimer" class="hover:text-primary transition-colors">Disclaimer</a></li>
+            <li><a href="/website-credit" class="hover:text-primary transition-colors">Website Credit</a></li>
+            <li><a href="/dmca" class="hover:text-primary transition-colors">DMCA Policy</a></li>
             <li>
               <div class="flex space-x-2 font-mono text-[10px] mt-2 pt-2 border-t border-hairline">
                 <a href="/sitemap.xml" class="text-mute hover:text-primary">sitemap.xml</a>

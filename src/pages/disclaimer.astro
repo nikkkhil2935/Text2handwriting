@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AdSlot from '../components/common/AdSlot.astro';
+
+const disclaimerSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  'name': 'Disclaimer - Text to Handwriting',
+  'description': 'Read the Text to Handwriting Disclaimer. Understand our policies regarding academic honesty, tool usage, and educational boundaries.'
+};
+---
+
+<BaseLayout
+  title="Disclaimer - Text to Handwriting"
+  description="Read the Text to Handwriting disclaimer. Learn about academic honesty guidelines, presentation support boundaries, and liability terms."
+  activeTab="disclaimer"
+  schema={disclaimerSchema}
+>
+  <div class="max-w-3xl mx-auto space-y-8">
+    <AdSlot slotId="header-leaderboard" />
+
+    <div class="border-b border-hairline pb-4 text-center">
+      <h1 class="text-3xl font-bold tracking-tight text-primary uppercase font-mono">Disclaimer</h1>
+      <p class="text-xs text-mute font-mono mt-1">Effective Date: June 16, 2026. Terms of use guidelines.</p>
+    </div>
+
+    <div class="space-y-6 text-xs md:text-sm text-body leading-relaxed">
+      <p>
+        Welcome to **Text to Handwriting** (accessible via <code>texttohandwriting.me</code>). Please read this Disclaimer carefully before using our handwriting converter, signature maker, notebook sheet generator, and other client-side tools.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">1. Educational & Creative Use Only</h2>
+      <p>
+        The tools provided on this website are designed for educational, personal, design, and creative purposes only. The platform aims to assist users in formatting text into handwriting styles, generating digital signatures for design layouts, and creating notebook templates for personal organization.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">2. Academic Honesty Policy</h2>
+      <p>
+        This tool is **not** intended to bypass academic requirements, submit falsified records, or deceive educational institutions. We strongly discourage the use of our generator to commit academic fraud:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Original Submissions:</strong> Students are responsible for complying with the honor codes, guidelines, and rules of their respective schools, colleges, or universities.</li>
+        <li><strong>No Academic Misconduct:</strong> Generating handwritten-style text to present someone else's work as your own hand-written assignment or violating explicit rules requiring manual handwriting is at the user's own risk. Text to Handwriting accepts no liability for academic penalties, suspensions, or disciplinary actions.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">3. Legal Document Signing & Forgery</h2>
+      <p>
+        The Signature Generator and drawing components on this website are intended for casual digital documents, mockup designs, and creative layouts.
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>No Financial or Legal Documents:</strong> Do not use this tool to forge signatures, sign official legal affidavits, deeds, property transcripts, or financial instruments.</li>
+        <li><strong>Liability:</strong> We do not authenticate or secure generated signatures. We are not liable for any fraudulent use of signatures, identity theft, or dispute issues arising from digital files exported from our site.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">4. Accuracy of Rendered Content</h2>
+      <p>
+        While we strive to maintain high-fidelity layouts and realistic hand-written simulations:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>We do not guarantee that the generated images or PDFs will perfectly match physical human handwriting or satisfy all formal presentation standards.</li>
+        <li>The client-side rendering uses random baseline offset algorithms and web fonts, which may vary depending on your browser and operating system settings.</li>
+      </ul>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">5. Limitation of Liability</h2>
+      <p>
+        In no event shall Text to Handwriting, its developers, or affiliates be liable for any direct, indirect, incidental, special, or consequential damages resulting from the use or inability to use this platform, including but not limited to academic failure, administrative actions, loss of data, or visual render bugs.
+      </p>
+
+      <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">6. Contact Information</h2>
+      <p>
+        Should you require clarification on any of the terms outlined in this disclaimer, please contact us through our <a href="/contact-us" class="text-link hover:underline">Contact Us</a> page or email <code>support@texttohandwriting.me</code>.
+      </p>
+    </div>
+
+    <AdSlot slotId="footer-leaderboard" />
+  </div>
+</BaseLayout>
