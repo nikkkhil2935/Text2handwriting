@@ -116,8 +116,10 @@ function parseTextToWords(text) {
   return words;
 }
 
-function checkVerticalOverlapAndAdvanceY(currentY, pageIdx, elements, h, mTop, lineStep, scale) {
+function checkVerticalOverlapAndAdvanceY(currentY, pageIdx, elements, h, mTop, lineStep, scale, _depth) {
   let y = currentY;
+  const depth = _depth || 0;
+  if (depth > 20) return y; // safety valve against infinite recursion
   const pageElements = elements ? elements.filter(el => el.pageIndex === pageIdx && el.type !== 'sketch') : [];
   const sortedElements = [...pageElements].sort((a, b) => a.y - b.y);
   let advanced = false;
@@ -133,7 +135,7 @@ function checkVerticalOverlapAndAdvanceY(currentY, pageIdx, elements, h, mTop, l
     }
   }
   if (advanced) {
-    return checkVerticalOverlapAndAdvanceY(y, pageIdx, elements, h, mTop, lineStep, scale);
+    return checkVerticalOverlapAndAdvanceY(y, pageIdx, elements, h, mTop, lineStep, scale, depth + 1);
   }
   return y;
 }

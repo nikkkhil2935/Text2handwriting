@@ -363,7 +363,7 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
       }
 
       try {
-        const img = new Image();
+        const img = new window.Image();
         img.src = el.dataUrl;
         await new Promise((resolve, reject) => {
           img.onload = resolve;
@@ -424,7 +424,7 @@ export default function ConverterApp({
   const [vJitter, setVJitter] = useState(1.2);
   const [hJitter, setHJitter] = useState(0.6);
   const [baselineDrift, setBaselineDrift] = useState(0.8);
-  const [baselineOffset, setBaselineOffset] = useState(4);
+  const [baselineOffset, setBaselineOffset] = useState(0);
   const [fontBuffer, setFontBuffer] = useState<ArrayBuffer | null>(null);
   const [pressureVariation, setPressureVariation] = useState(0.12);
   const [smudge, setSmudge] = useState(false);
@@ -1423,16 +1423,16 @@ export default function ConverterApp({
       )}
 
       {/* Modern Formatting Toolbar */}
-      <div className="w-full flex flex-wrap items-center justify-between gap-4 p-3 bg-canvas border border-hairline rounded-lg shadow-sm font-mono text-xs">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="w-full flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-between gap-3 md:gap-4 p-3 bg-canvas border border-hairline rounded-lg shadow-sm font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-3 md:gap-4">
 
           {/* Select Handwriting Font */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Handwriting Style</span>
             <select
               value={fontFamily}
               onChange={(e) => setFontFamily(e.target.value)}
-              className="input-field h-8 bg-canvas text-xs font-mono py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer"
+              className="input-field h-8 bg-canvas text-xs font-mono py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer min-w-0 w-full"
             >
               <optgroup label="Standard Fonts">
                 {FONTS.map(font => (
@@ -1456,45 +1456,45 @@ export default function ConverterApp({
           {/* Text Formatting Toolbar */}
           <div className="flex flex-col">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Format</span>
-            <div className="flex items-center border border-hairline rounded-md h-8 bg-canvas overflow-hidden">
+            <div className="flex flex-wrap items-center border border-hairline rounded-md bg-canvas min-h-8">
               <button
                 onClick={() => handleToggleFormat('**')}
-                className={`px-3 h-full font-bold border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                className={`px-2 md:px-3 h-8 font-bold border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Bold Handwriting"
               >
                 B
               </button>
               <button
                 onClick={() => handleToggleFormat('*')}
-                className={`px-3 h-full italic border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                className={`px-2 md:px-3 h-8 italic border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Italic (Slant)"
               >
                 I
               </button>
               <button
                 onClick={() => handleToggleFormat('__')}
-                className={`px-3 h-full underline border-r border-hairline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
+                className={`px-2 md:px-3 h-8 underline border-r border-hairline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
                 title="Toggle Underline"
               >
                 U
               </button>
               <button
                 onClick={() => insertTextAtCursor('\n• ')}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
                 title="Bullet List"
               >
                 • List
               </button>
               <button
                 onClick={() => insertTextAtCursor('\n1. ')}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
                 title="Numbered List"
               >
                 1. List
               </button>
               <button
                 onClick={() => setLineMarginPadding(prev => Math.max(0, prev - 10))}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Outdent"
               >
                 ←
@@ -1504,14 +1504,14 @@ export default function ConverterApp({
                   const nextAlign = alignment === 'left' ? 'center' : alignment === 'center' ? 'right' : 'left';
                   setAlignment(nextAlign);
                 }}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Alignment"
               >
                 ↕
               </button>
               <button
                 onClick={() => setLineMarginPadding(prev => Math.min(150, prev + 10))}
-                className="px-3 h-full transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
+                className="px-2 md:px-3 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Indent"
               >
                 →
@@ -1522,7 +1522,7 @@ export default function ConverterApp({
           {/* Insert Elements Toolbar */}
           <div className="flex flex-col">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Insert</span>
-            <div className="flex items-center border border-hairline rounded-md h-8 bg-canvas overflow-hidden">
+            <div className="flex flex-wrap items-center border border-hairline rounded-md bg-canvas min-h-8">
               <button
                 onClick={() => {
                   const fileInput = document.createElement('input');
@@ -1552,21 +1552,21 @@ export default function ConverterApp({
                   };
                   fileInput.click();
                 }}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert Image"
               >
                 <Image size={14} /> Image
               </button>
               <button
                 onClick={() => setIsTableModalOpen(true)}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert Hand-Drawn Table"
               >
                 <Table2 size={14} /> Table
               </button>
               <button
                 onClick={() => setIsFormulaModalOpen(true)}
-                className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert LaTeX Formula"
               >
                 <Sigma size={14} /> Formula
@@ -1576,7 +1576,7 @@ export default function ConverterApp({
                   setIsDrawingMode(!isDrawingMode);
                   if (!isDrawingMode) setEditMode('preview');
                 }}
-                className={`px-3 h-full border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
+                className={`px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
                 title="Enable Sketch Drawing"
               >
                 <Pencil size={14} /> Sketch
@@ -1584,7 +1584,7 @@ export default function ConverterApp({
               <button
                 disabled={isPdfImporting}
                 onClick={() => pdfFileInputRef.current?.click()}
-                className="px-3 h-full transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
+                className="px-2 md:px-3 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
                 title="Import Text from PDF"
               >
                 {isPdfImporting ? <><Loader2 size={14} className="animate-spin" />...</> : 'Import PDF'}
@@ -1616,12 +1616,12 @@ export default function ConverterApp({
           </div>
 
           {/* Ruled Paper Style */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Paper Lines</span>
             <select
               value={paperStyle}
               onChange={(e) => setPaperStyle(e.target.value)}
-              className="input-field h-8 bg-canvas text-xs py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer"
+              className="input-field h-8 bg-canvas text-xs py-1 px-2 border border-hairline rounded-md outline-none cursor-pointer min-w-0 w-full"
             >
               <option value="plain">Plain White</option>
               <option value="single-ruled">Single Ruled</option>
@@ -1637,7 +1637,7 @@ export default function ConverterApp({
           {/* Ink Color */}
           <div className="flex flex-col">
             <span className="text-[10px] text-mute font-bold uppercase mb-1">Ink Color</span>
-            <div className="flex items-center gap-1.5 h-8 px-2 border border-hairline rounded-md bg-canvas">
+            <div className="flex items-center gap-1.5 h-8 px-2 border border-hairline rounded-md bg-canvas shrink-0">
               {['#0000ff', '#1c1917', '#dc2626'].map(color => (
                 <button
                   key={color}
@@ -1678,7 +1678,7 @@ export default function ConverterApp({
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-center md:items-end">
           <span className="text-[10px] text-mute font-bold uppercase mb-1">View Mode</span>
           <div className="flex items-center bg-canvas-soft-2 p-0.5 rounded-md border border-hairline h-8 text-[11px]">
             <button
