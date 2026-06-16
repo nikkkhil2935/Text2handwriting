@@ -202,8 +202,30 @@ interface CanvasElement {
   width: number; // percentage-based width
   height: number; // percentage-based height
   dataUrl?: string; // image source URL
+  latexSrc?: string; // raw LaTeX string (for formula elements – rendered inline, no html-to-image)
   strokes?: Array<{ x: number; y: number; type: 'start' | 'move' }>; // vector sketch paths
 }
+
+// Inline KaTeX renderer – avoids html-to-image CORS/font issues by rendering directly in the DOM
+const FormulaDisplay: React.FC<{ latexSrc: string; inkColor: string }> = ({ latexSrc, inkColor }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    try {
+      katex.render(latexSrc, ref.current, { throwOnError: false, displayMode: true });
+    } catch {
+      if (ref.current) ref.current.textContent = latexSrc;
+    }
+  }, [latexSrc]);
+  return (
+    <div
+      ref={ref}
+      className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none"
+      style={{ color: inkColor, fontSize: '14px', padding: '4px' }}
+    />
+  );
+};
+
 
 const drawTableToDataUrl = (
   rows: string[][],
@@ -334,7 +356,7 @@ const drawFormulaToDataUrl = async (
   }
 };
 
-const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[]> => {
+const prepareElementsForWorker = async (elements: CanvasElement[], inkColor = '#0000ff'): Promise<any[]> => {
   return Promise.all(
     elements.map(async (el) => {
       if (el.type === 'sketch') {
@@ -350,7 +372,18 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
         };
       }
 
-      if (!el.dataUrl) {
+      // For formula elements with latexSrc but no pre-generated dataUrl,
+      // rasterize them just before sending to the worker (for export quality)
+      let dataUrl = el.dataUrl;
+      if (el.type === 'formula' && el.latexSrc && !dataUrl) {
+        try {
+          dataUrl = await drawFormulaToDataUrl(el.latexSrc, inkColor);
+        } catch (err) {
+          console.error('Failed to rasterize formula for worker', err);
+        }
+      }
+
+      if (!dataUrl) {
         return {
           id: el.id,
           type: el.type,
@@ -364,7 +397,7 @@ const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[
 
       try {
         const img = new window.Image();
-        img.src = el.dataUrl;
+        img.src = dataUrl;
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
@@ -735,7 +768,7 @@ export default function ConverterApp({
       }
 
       // Prepare overlay elements for worker
-      const workerElements = await prepareElementsForWorker(canvasElements);
+      const workerElements = await prepareElementsForWorker(canvasElements, inkColor);
 
       const customFontsPayload = [
         ...customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer }))
@@ -977,7 +1010,7 @@ export default function ConverterApp({
       }
 
       // Prepare overlay elements for worker
-      const workerElements = await prepareElementsForWorker(canvasElements);
+      const workerElements = await prepareElementsForWorker(canvasElements, inkColor);
 
       exportWorker.onmessage = (e) => {
         const { type, pages: buffers, message } = e.data;
@@ -1081,13 +1114,14 @@ export default function ConverterApp({
     }
   };
 
-  const handleDragStart = (e: React.MouseEvent, el: CanvasElement) => {
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent, el: CanvasElement) => {
     e.preventDefault();
     e.stopPropagation();
     setSelectedElementId(el.id);
 
-    const startMouseX = e.clientX;
-    const startMouseY = e.clientY;
+    const isTouch = 'touches' in e;
+    const startClientX = isTouch ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const startClientY = isTouch ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
     const startElX = el.x;
     const startElY = el.y;
 
@@ -1097,9 +1131,9 @@ export default function ConverterApp({
     const containerWidth = rect.width;
     const containerHeight = rect.height;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = ((moveEvent.clientX - startMouseX) / containerWidth) * 100;
-      const deltaY = ((moveEvent.clientY - startMouseY) / containerHeight) * 100;
+    const handleMove = (clientX: number, clientY: number) => {
+      const deltaX = ((clientX - startClientX) / containerWidth) * 100;
+      const deltaY = ((clientY - startClientY) / containerHeight) * 100;
 
       const newX = Math.max(0, Math.min(100 - el.width, startElX + deltaX));
       const newY = Math.max(0, Math.min(100 - el.height, startElY + deltaY));
@@ -1107,22 +1141,33 @@ export default function ConverterApp({
       setCanvasElements(prev => prev.map(item => item.id === el.id ? { ...item, x: newX, y: newY } : item));
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (moveEvent: MouseEvent) => handleMove(moveEvent.clientX, moveEvent.clientY);
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      moveEvent.preventDefault();
+      handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+    };
+
+    const cleanup = () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', cleanup);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', cleanup);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseup', cleanup);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', cleanup);
   };
 
-  const handleResizeStart = (e: React.MouseEvent, el: CanvasElement) => {
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent, el: CanvasElement) => {
     e.preventDefault();
     e.stopPropagation();
     setSelectedElementId(el.id);
 
-    const startMouseX = e.clientX;
-    const startMouseY = e.clientY;
+    const isTouch = 'touches' in e;
+    const startClientX = isTouch ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+    const startClientY = isTouch ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
     const startElWidth = el.width;
     const startElHeight = el.height;
 
@@ -1132,9 +1177,9 @@ export default function ConverterApp({
     const containerWidth = rect.width;
     const containerHeight = rect.height;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaWidth = ((moveEvent.clientX - startMouseX) / containerWidth) * 100;
-      const deltaHeight = ((moveEvent.clientY - startMouseY) / containerHeight) * 100;
+    const handleMove = (clientX: number, clientY: number) => {
+      const deltaWidth = ((clientX - startClientX) / containerWidth) * 100;
+      const deltaHeight = ((clientY - startClientY) / containerHeight) * 100;
 
       const newWidth = Math.max(5, Math.min(100 - el.x, startElWidth + deltaWidth));
       const newHeight = Math.max(5, Math.min(100 - el.y, startElHeight + deltaHeight));
@@ -1142,36 +1187,43 @@ export default function ConverterApp({
       setCanvasElements(prev => prev.map(item => item.id === el.id ? { ...item, width: newWidth, height: newHeight } : item));
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (moveEvent: MouseEvent) => handleMove(moveEvent.clientX, moveEvent.clientY);
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      moveEvent.preventDefault();
+      handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+    };
+
+    const cleanup = () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', cleanup);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', cleanup);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseup', cleanup);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', cleanup);
   };
 
-  const getCoordinatesFromEvent = (clientX: number, clientY: number) => {
+  const getPercentCoordinatesFromEvent = (clientX: number, clientY: number) => {
     const container = document.getElementById('preview-container');
     if (!container) return { x: 0, y: 0 };
     const rect = container.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    const y = ((clientY - rect.top) / rect.height) * 100;
-    return {
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y))
-    };
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    return { x, y };
   };
 
   const handleSketchStart = (e: React.MouseEvent) => {
     e.preventDefault();
-    const coords = getCoordinatesFromEvent(e.clientX, e.clientY);
+    const coords = getPercentCoordinatesFromEvent(e.clientX, e.clientY);
     setCurrentSketchStrokes([{ x: coords.x, y: coords.y, type: 'start' }]);
   };
 
   const handleSketchMove = (e: React.MouseEvent) => {
     if (currentSketchStrokes.length === 0) return;
-    const coords = getCoordinatesFromEvent(e.clientX, e.clientY);
+    const coords = getPercentCoordinatesFromEvent(e.clientX, e.clientY);
     setCurrentSketchStrokes(prev => [...prev, { x: coords.x, y: coords.y, type: 'move' }]);
   };
 
@@ -1194,16 +1246,18 @@ export default function ConverterApp({
   };
 
   const handleSketchTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
     if (e.touches.length === 0) return;
     const touch = e.touches[0];
-    const coords = getCoordinatesFromEvent(touch.clientX, touch.clientY);
+    const coords = getPercentCoordinatesFromEvent(touch.clientX, touch.clientY);
     setCurrentSketchStrokes([{ x: coords.x, y: coords.y, type: 'start' }]);
   };
 
   const handleSketchTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
     if (currentSketchStrokes.length === 0) return;
     const touch = e.touches[0];
-    const coords = getCoordinatesFromEvent(touch.clientX, touch.clientY);
+    const coords = getPercentCoordinatesFromEvent(touch.clientX, touch.clientY);
     setCurrentSketchStrokes(prev => [...prev, { x: coords.x, y: coords.y, type: 'move' }]);
   };
 
@@ -1367,8 +1421,12 @@ export default function ConverterApp({
           {el.type === 'image' && el.dataUrl && (
             <img src={el.dataUrl} alt="Canvas image element" className="w-full h-full object-contain pointer-events-none" />
           )}
-          {el.type === 'formula' && el.dataUrl && (
-            <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
+          {el.type === 'formula' && (
+            el.latexSrc
+              ? <FormulaDisplay latexSrc={el.latexSrc} inkColor={inkColor} />
+              : el.dataUrl
+                ? <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
+                : null
           )}
           {el.type === 'table' && el.dataUrl && (
             <img src={el.dataUrl} alt="Canvas table element" className="w-full h-full object-contain pointer-events-none" />
@@ -1378,15 +1436,17 @@ export default function ConverterApp({
             <>
               {/* Drag Handle (top/center bar) */}
               <div
-                className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors"
+                className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors touch-none"
                 onMouseDown={(e) => handleDragStart(e, el)}
+                onTouchStart={(e) => handleDragStart(e, el)}
                 title="Drag Element"
               />
 
               {/* Resize Handle (bottom right corner) */}
               <div
-                className="absolute right-0 bottom-0 w-3 h-3 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-0 bottom-0 w-5 h-5 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity touch-none"
                 onMouseDown={(e) => handleResizeStart(e, el)}
+                onTouchStart={(e) => handleResizeStart(e, el)}
                 title="Resize Element"
               />
 
@@ -1397,7 +1457,7 @@ export default function ConverterApp({
                   setCanvasElements(prev => prev.filter(item => item.id !== el.id));
                   setSelectedElementId(null);
                 }}
-                className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
+                className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                 title="Delete Element"
               >
                 ×
@@ -1994,7 +2054,7 @@ export default function ConverterApp({
                   }}
                   className="select-text focus:outline-none placeholder:text-gray-300 transition-colors"
                 />
-                <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-auto z-20 overflow-hidden">
                   {renderElementsOverlay(true)}
                 </div>
               </div>
@@ -2046,8 +2106,12 @@ export default function ConverterApp({
                             {el.type === 'image' && el.dataUrl && (
                               <img src={el.dataUrl} alt="Canvas image element" className="w-full h-full object-contain pointer-events-none" />
                             )}
-                            {el.type === 'formula' && el.dataUrl && (
-                              <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
+                            {el.type === 'formula' && (
+                              el.latexSrc
+                                ? <FormulaDisplay latexSrc={el.latexSrc} inkColor={inkColor} />
+                                : el.dataUrl
+                                  ? <img src={el.dataUrl} alt="Canvas formula element" className="w-full h-full object-contain pointer-events-none" />
+                                  : null
                             )}
                             {el.type === 'table' && el.dataUrl && (
                               <img src={el.dataUrl} alt="Canvas table element" className="w-full h-full object-contain pointer-events-none" />
@@ -2055,15 +2119,17 @@ export default function ConverterApp({
 
                             {/* Drag Handle (top/center bar) */}
                             <div
-                              className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors"
+                              className="absolute -top-1 left-4 right-4 h-2 bg-transparent cursor-move group-hover:bg-primary/20 rounded transition-colors touch-none"
                               onMouseDown={(e) => handleDragStart(e, el)}
+                              onTouchStart={(e) => handleDragStart(e, el)}
                               title="Drag Element"
                             />
 
                             {/* Resize Handle (bottom right corner) */}
                             <div
-                              className="absolute right-0 bottom-0 w-3 h-3 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute right-0 bottom-0 w-5 h-5 bg-link border border-white cursor-se-resize rounded-full opacity-0 group-hover:opacity-100 transition-opacity touch-none"
                               onMouseDown={(e) => handleResizeStart(e, el)}
+                              onTouchStart={(e) => handleResizeStart(e, el)}
                               title="Resize Element"
                             />
 
@@ -2074,7 +2140,7 @@ export default function ConverterApp({
                                 setCanvasElements(prev => prev.filter(item => item.id !== el.id));
                                 setSelectedElementId(null);
                               }}
-                              className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
+                              className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                               title="Delete Element"
                             >
                               ×
@@ -2094,16 +2160,22 @@ export default function ConverterApp({
                           onTouchMove={handleSketchTouchMove}
                           onTouchEnd={handleSketchTouchEnd}
                         >
-                          <svg className="w-full h-full pointer-events-none">
+                          {/* SVG uses viewBox="0 0 100 100" so stroke x/y (0-100) map correctly */}
+                          <svg
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            className="w-full h-full pointer-events-none"
+                            style={{ position: 'absolute', inset: 0 }}
+                          >
                             {canvasElements
                               .filter(el => el.pageIndex === previewPageIdx && el.type === 'sketch')
                               .map(el => {
                                 let pathData = '';
                                 el.strokes?.forEach((pt) => {
                                   if (pt.type === 'start') {
-                                    pathData += ` M ${pt.x}% ${pt.y}%`;
+                                    pathData += ` M ${pt.x} ${pt.y}`;
                                   } else {
-                                    pathData += ` L ${pt.x}% ${pt.y}%`;
+                                    pathData += ` L ${pt.x} ${pt.y}`;
                                   }
                                 });
                                 return (
@@ -2116,17 +2188,18 @@ export default function ConverterApp({
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     opacity="0.9"
+                                    vectorEffect="non-scaling-stroke"
                                   />
                                 );
                               })
                             }
                             {currentSketchStrokes.length > 0 && (
-                              <path
+                                              <path
                                 d={currentSketchStrokes.reduce((acc, pt) => {
                                   if (pt.type === 'start') {
-                                    return `${acc} M ${pt.x}% ${pt.y}%`;
+                                    return `${acc} M ${pt.x} ${pt.y}`;
                                   } else {
-                                    return `${acc} L ${pt.x}% ${pt.y}%`;
+                                    return `${acc} L ${pt.x} ${pt.y}`;
                                   }
                                 }, '')}
                                 fill="none"
@@ -2135,6 +2208,7 @@ export default function ConverterApp({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 opacity="0.9"
+                                vectorEffect="non-scaling-stroke"
                               />
                             )}
                           </svg>
@@ -2879,26 +2953,24 @@ export default function ConverterApp({
                 Cancel
               </button>
               <button
-                onClick={async () => {
-                  showToast('Rendering equation...');
-                  setIsFormulaModalOpen(false);
-                  const url = await drawFormulaToDataUrl(latexInput, inkColor);
-                  if (url) {
-                    const newElement: CanvasElement = {
-                      id: String(Date.now()),
-                      type: 'formula',
-                      pageIndex: previewPageIdx,
-                      x: 25,
-                      y: 35,
-                      width: 35,
-                      height: 8,
-                      dataUrl: url
-                    };
-                    setCanvasElements(prev => [...prev, newElement]);
-                    showToast('LaTeX Formula Inserted!');
-                  } else {
-                    showToast('Rendering error!', true);
+                onClick={() => {
+                  if (!latexInput.trim()) {
+                    showToast('Please enter a LaTeX expression', true);
+                    return;
                   }
+                  const newElement: CanvasElement = {
+                    id: String(Date.now()),
+                    type: 'formula',
+                    pageIndex: previewPageIdx,
+                    x: 15,
+                    y: 30,
+                    width: 55,
+                    height: 18,
+                    latexSrc: latexInput
+                  };
+                  setCanvasElements(prev => [...prev, newElement]);
+                  setIsFormulaModalOpen(false);
+                  showToast('LaTeX Formula Inserted!');
                 }}
                 className="btn-primary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
               >
