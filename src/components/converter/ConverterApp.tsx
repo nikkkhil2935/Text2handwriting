@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Undo2, Redo2, Download, RefreshCw, Save, FolderOpen,
   Settings, Type, FileText, Sparkles, Sliders, Keyboard,
-  Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2
+  Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2,
+  Image, Table2, Sigma, Pencil, Loader2
 } from 'lucide-react';
 import katex from 'katex';
 import * as htmlToImage from 'html-to-image';
@@ -1554,21 +1555,21 @@ export default function ConverterApp({
                 className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert Image"
               >
-                🌅 Image
+                <Image size={14} /> Image
               </button>
               <button
                 onClick={() => setIsTableModalOpen(true)}
                 className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert Hand-Drawn Table"
               >
-                田 Table
+                <Table2 size={14} /> Table
               </button>
               <button
                 onClick={() => setIsFormulaModalOpen(true)}
                 className="px-3 h-full border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
                 title="Insert LaTeX Formula"
               >
-                Σ Formula
+                <Sigma size={14} /> Formula
               </button>
               <button
                 onClick={() => {
@@ -1578,7 +1579,7 @@ export default function ConverterApp({
                 className={`px-3 h-full border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
                 title="Enable Sketch Drawing"
               >
-                ✏️ Sketch
+                <Pencil size={14} /> Sketch
               </button>
               <button
                 disabled={isPdfImporting}
@@ -1586,7 +1587,7 @@ export default function ConverterApp({
                 className="px-3 h-full transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
                 title="Import Text from PDF"
               >
-                {isPdfImporting ? '⏳...' : 'Import PDF'}
+                {isPdfImporting ? <><Loader2 size={14} className="animate-spin" />...</> : 'Import PDF'}
               </button>
               <input
                 type="file"
@@ -1731,8 +1732,8 @@ export default function ConverterApp({
             {editMode === 'edit' ? (
               /* Inline Editable Textarea styled exactly like ruled notebook paper */
               <div className="relative w-full h-full">
-                {/* Overlay standard headers if not assignment header */}
-                {!isAssignmentHeaderEnabled && (headerLeft || headerCenter || headerRight) && (
+                {/* Editable standard headers in Edit Mode if not assignment header */}
+                {!isAssignmentHeaderEnabled && (
                   <div
                     style={{
                       position: 'absolute',
@@ -1746,21 +1747,53 @@ export default function ConverterApp({
                       display: 'flex',
                       alignItems: 'flex-end',
                       paddingBottom: `${fontSize * 0.4 * scale}px`,
-                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
-                      fontSize: `${fontSize * 0.7 * scale}px`,
-                      color: inkColor,
-                      opacity: 0.8,
-                      zIndex: 15
+                      zIndex: 30
                     }}
-                    className="select-none font-mono"
+                    className="font-mono"
                   >
-                    <div className="w-1/3 text-left truncate">{headerLeft}</div>
-                    <div className="w-1/3 text-center truncate">{headerCenter}</div>
-                    <div className="w-1/3 text-right truncate">{headerRight}</div>
+                    <input
+                      type="text"
+                      value={headerLeft}
+                      onChange={(e) => setHeaderLeft(e.target.value)}
+                      placeholder="Left Header..."
+                      className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-left placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
+                      style={{
+                        fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                        fontSize: `${fontSize * 0.7 * scale}px`,
+                        color: inkColor,
+                        opacity: 0.8,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={headerCenter}
+                      onChange={(e) => setHeaderCenter(e.target.value)}
+                      placeholder="Center Header..."
+                      className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-center placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
+                      style={{
+                        fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                        fontSize: `${fontSize * 0.7 * scale}px`,
+                        color: inkColor,
+                        opacity: 0.8,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={headerRight}
+                      onChange={(e) => setHeaderRight(e.target.value)}
+                      placeholder="Right Header..."
+                      className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-right placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
+                      style={{
+                        fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                        fontSize: `${fontSize * 0.7 * scale}px`,
+                        color: inkColor,
+                        opacity: 0.8,
+                      }}
+                    />
                   </div>
                 )}
 
-                {/* Overlay Assignment Header */}
+                {/* Editable Assignment Header in Edit Mode */}
                 {isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0 && (
                   <div
                     style={{
@@ -1775,16 +1808,12 @@ export default function ConverterApp({
                       paddingLeft: `${(margins.left + lineMarginPadding) * scale}px`,
                       paddingRight: `${margins.right * scale}px`,
                       pointerEvents: 'none',
-                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
-                      fontSize: `${fontSize * 0.95 * scale}px`,
-                      color: inkColor,
-                      opacity: 0.9,
-                      zIndex: 15,
+                      zIndex: 30,
                       display: 'flex',
                       flexDirection: 'column',
                       paddingBottom: `${8 * scale}px`
                     }}
-                    className="select-none font-mono"
+                    className="font-mono"
                   >
                     {/* Render fields row by row */}
                     {(() => {
@@ -1793,18 +1822,59 @@ export default function ConverterApp({
                       const maxRows = Math.max(leftFields.length, rightFields.length);
                       const rows = [];
                       for (let r = 0; r < maxRows; r++) {
+                        const leftField = leftFields[r];
+                        const rightField = rightFields[r];
                         rows.push(
                           <div
                             key={r}
-                            className="flex justify-between"
-                            style={{ height: `${gridSize * scale}px`, lineHeight: `${gridSize * scale}px` }}
+                            className="flex justify-between items-center"
+                            style={{ height: `${gridSize * scale}px` }}
                           >
-                            <span className="truncate">
-                              {leftFields[r] ? `${leftFields[r].label}: ${leftFields[r].value || '____________________'}` : ''}
-                            </span>
-                            <span className="truncate pr-4 text-right">
-                              {rightFields[r] ? `${rightFields[r].label}: ${rightFields[r].value || '_________'}` : ''}
-                            </span>
+                            {leftField ? (
+                              <div className="flex items-center gap-1 w-[48%] h-full pointer-events-auto">
+                                <span className="shrink-0 select-none font-bold opacity-80" style={{ fontSize: `${fontSize * 0.95 * scale}px` }}>{leftField.label}:</span>
+                                <input
+                                  type="text"
+                                  value={leftField.value}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setAssignmentFields(prev => prev.map(f => f.id === leftField.id ? { ...f, value: val } : f));
+                                  }}
+                                  placeholder="Value..."
+                                  className="flex-grow bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-left placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px]"
+                                  style={{
+                                    fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                                    fontSize: `${fontSize * 0.95 * scale}px`,
+                                    color: inkColor,
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-[48%]" />
+                            )}
+
+                            {rightField ? (
+                              <div className="flex items-center justify-end gap-1 w-[48%] h-full pr-4 text-right pointer-events-auto">
+                                <span className="shrink-0 select-none font-bold opacity-80" style={{ fontSize: `${fontSize * 0.95 * scale}px` }}>{rightField.label}:</span>
+                                <input
+                                  type="text"
+                                  value={rightField.value}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setAssignmentFields(prev => prev.map(f => f.id === rightField.id ? { ...f, value: val } : f));
+                                  }}
+                                  placeholder="Value..."
+                                  className="w-[120px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-right placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px]"
+                                  style={{
+                                    fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                                    fontSize: `${fontSize * 0.95 * scale}px`,
+                                    color: inkColor,
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-[48%]" />
+                            )}
                           </div>
                         );
                       }
@@ -1813,7 +1883,7 @@ export default function ConverterApp({
 
                     {/* Divider Line on the last ruled line */}
                     <div
-                      className="absolute left-0 right-0 border-t-2 border-double border-[#ff8a8a]"
+                      className="absolute left-0 right-0 border-t-2 border-double border-[#ff8a8a] pointer-events-none"
                       style={{
                         top: `${Math.max(
                           assignmentFields.filter(f => f.alignment === 'left').length,
@@ -1826,34 +1896,64 @@ export default function ConverterApp({
                   </div>
                 )}
 
-                {/* Overlay Footers */}
-                {(footerLeft || footerCenter || footerRight) && (
-                  <div
+                {/* Editable Footers in Edit Mode */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${margins.bottom * scale}px`,
+                    paddingLeft: `${margins.left * scale}px`,
+                    paddingRight: `${margins.right * scale}px`,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    paddingTop: `${fontSize * 0.4 * scale}px`,
+                    zIndex: 30
+                  }}
+                  className="font-mono"
+                >
+                  <input
+                    type="text"
+                    value={footerLeft}
+                    onChange={(e) => setFooterLeft(e.target.value)}
+                    placeholder="Left Footer..."
+                    className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-left placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
                     style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${margins.bottom * scale}px`,
-                      paddingLeft: `${margins.left * scale}px`,
-                      paddingRight: `${margins.right * scale}px`,
-                      pointerEvents: 'none',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      paddingTop: `${fontSize * 0.4 * scale}px`,
                       fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
                       fontSize: `${fontSize * 0.7 * scale}px`,
                       color: inkColor,
                       opacity: 0.8,
-                      zIndex: 15
                     }}
-                    className="select-none font-mono"
-                  >
-                    <div className="w-1/3 text-left truncate">{footerLeft.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
-                    <div className="w-1/3 text-center truncate">{footerCenter.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
-                    <div className="w-1/3 text-right truncate">{footerRight.replace(/{page}/g, '1').replace(/{pages}/g, '1')}</div>
-                  </div>
-                )}
+                  />
+                  <input
+                    type="text"
+                    value={footerCenter}
+                    onChange={(e) => setFooterCenter(e.target.value)}
+                    placeholder="Center Footer..."
+                    className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-center placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
+                    style={{
+                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                      fontSize: `${fontSize * 0.7 * scale}px`,
+                      color: inkColor,
+                      opacity: 0.8,
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={footerRight}
+                    onChange={(e) => setFooterRight(e.target.value)}
+                    placeholder="Right Footer..."
+                    className="w-1/3 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-right placeholder:text-gray-300 hover:border-dashed hover:border-gray-300 focus:bg-canvas-soft/30 p-1 font-mono text-[11px] pointer-events-auto"
+                    style={{
+                      fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
+                      fontSize: `${fontSize * 0.7 * scale}px`,
+                      color: inkColor,
+                      opacity: 0.8,
+                    }}
+                  />
+                </div>
 
                 <textarea
                   ref={textareaRef}
