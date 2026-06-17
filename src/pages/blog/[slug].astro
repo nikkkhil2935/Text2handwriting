@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { BLOG_POSTS } from '../../lib/blog-data';
 import AdSlot from '../../components/common/AdSlot.astro';
+import RelatedTools from '../../components/common/RelatedTools.astro';
 
 export async function getStaticPaths() {
   return BLOG_POSTS.map(post => ({
@@ -105,4 +106,8 @@ const articleSchema = {
     )}
 
   </article>
+
+  <!-- Internal Backlinks: Free Tools -->
+  <RelatedTools current="/blog" heading="Try Our Free Handwriting Tools" />
+
 </BaseLayout>

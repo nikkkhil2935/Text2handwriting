@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ConverterApp from '../components/converter/ConverterApp';
 import AdSlot from '../components/common/AdSlot.astro';
+import RelatedTools from '../components/common/RelatedTools.astro';
 
 const CURSIVE_FAQS = [
   {
@@ -140,6 +141,8 @@ const pageSchema = {
       </div>
 
     </div>
+
+    <RelatedTools current="/text-to-cursive" />
 
     <AdSlot slotId="footer-leaderboard" />
   </div>

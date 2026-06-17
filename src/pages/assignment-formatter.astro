@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ConverterApp from '../components/converter/ConverterApp';
 import AdSlot from '../components/common/AdSlot.astro';
+import RelatedTools from '../components/common/RelatedTools.astro';
 
 const ASSIGNMENT_FAQS = [
   {
@@ -146,6 +147,8 @@ const pageSchema = {
       </div>
 
     </div>
+
+    <RelatedTools current="/assignment-formatter" />
 
     <AdSlot slotId="footer-leaderboard" />
   </div>

@@ -1,0 +1,108 @@
+---
+/**
+ * RelatedTools.astro
+ * Displays a curated grid of internal backlinks to related tools.
+ * Used across all tool pages for SEO and cross-navigation.
+ */
+
+interface Tool {
+  href: string;
+  label: string;
+  description: string;
+  icon: string;
+  badge?: string;
+}
+
+interface Props {
+  /** The slug of the current page (excluded from the grid) */
+  current: string;
+  /** Optional override heading */
+  heading?: string;
+}
+
+const { current, heading = 'Explore More Handwriting Tools' } = Astro.props;
+
+const ALL_TOOLS: Tool[] = [
+  {
+    href: '/',
+    label: 'Text to Handwriting',
+    description: 'Convert any typed text into realistic, print-ready handwriting with 20+ fonts.',
+    icon: '✍️',
+    badge: 'Most Popular',
+  },
+  {
+    href: '/bulk-generator',
+    label: 'Bulk Generator',
+    description: 'Convert hundreds of pages at once via CSV or delimiter-separated text.',
+    icon: '📚',
+  },
+  {
+    href: '/assignment-formatter',
+    label: 'Assignment Formatter',
+    description: 'Format typed homework as neat handwritten pages with name, date & headers.',
+    icon: '📝',
+  },
+  {
+    href: '/signature-generator',
+    label: 'Signature Generator',
+    description: 'Create professional cursive signatures from text or by drawing freehand.',
+    icon: '🖊️',
+  },
+  {
+    href: '/notebook-paper-generator',
+    label: 'Notebook Paper Generator',
+    description: 'Generate custom ruled, graph, dot-grid, and legal pad paper as PDFs.',
+    icon: '📄',
+  },
+  {
+    href: '/text-to-cursive',
+    label: 'Cursive Converter',
+    description: 'Transform any text into flowing cursive Unicode script instantly.',
+    icon: '🌀',
+  },
+  {
+    href: '/handwriting-font-preview',
+    label: 'Font Showcase',
+    description: 'Preview all 20+ handwriting fonts side by side before you generate.',
+    icon: '🔤',
+  },
+];
+
+// Exclude the current page from the backlinks list
+const tools = ALL_TOOLS.filter(t => t.href !== current);
+---
+
+<section class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline">
+  <h2 class="text-sm font-mono font-bold uppercase tracking-widest text-primary text-center mb-1">
+    {heading}
+  </h2>
+  <p class="text-center text-xs text-mute font-mono mb-8">
+    Free online handwriting tools — no sign-up, all client-side.
+  </p>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    {tools.map(tool => (
+      <a
+        href={tool.href}
+        class="group relative flex flex-col gap-1.5 border border-hairline bg-canvas hover:border-hairline-strong hover:bg-canvas-soft rounded-xl p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        aria-label={`Go to ${tool.label}`}
+      >
+        {tool.badge && (
+          <span class="absolute top-2 right-2 text-[9px] font-mono font-semibold uppercase tracking-wider text-link border border-link/30 bg-link/5 rounded-full px-1.5 py-0.5 leading-none">
+            {tool.badge}
+          </span>
+        )}
+        <span class="text-xl leading-none select-none" aria-hidden="true">{tool.icon}</span>
+        <span class="text-xs font-semibold font-mono text-primary group-hover:text-link transition-colors leading-snug mt-0.5">
+          {tool.label}
+        </span>
+        <span class="text-[11px] text-mute leading-relaxed line-clamp-2">
+          {tool.description}
+        </span>
+        <span class="text-[10px] font-mono text-link mt-auto pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          Open →
+        </span>
+      </a>
+    ))}
+  </div>
+</section>
