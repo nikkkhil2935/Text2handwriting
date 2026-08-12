@@ -27,44 +27,44 @@ const ALL_TOOLS: Tool[] = [
     href: '/',
     label: 'Text to Handwriting',
     description: 'Convert any typed text into realistic, print-ready handwriting with 20+ fonts.',
-    icon: '✍️',
+    icon: 'T',
     badge: 'Most Popular',
   },
   {
     href: '/bulk-generator',
     label: 'Bulk Generator',
     description: 'Convert hundreds of pages at once via CSV or delimiter-separated text.',
-    icon: '📚',
+    icon: 'B',
   },
   {
     href: '/assignment-formatter',
     label: 'Assignment Formatter',
     description: 'Format typed homework as neat handwritten pages with name, date & headers.',
-    icon: '📝',
+    icon: 'A',
   },
   {
     href: '/signature-generator',
     label: 'Signature Generator',
     description: 'Create professional cursive signatures from text or by drawing freehand.',
-    icon: '🖊️',
+    icon: 'S',
   },
   {
     href: '/notebook-paper-generator',
     label: 'Notebook Paper Generator',
     description: 'Generate custom ruled, graph, dot-grid, and legal pad paper as PDFs.',
-    icon: '📄',
+    icon: 'N',
   },
   {
     href: '/text-to-cursive',
     label: 'Cursive Converter',
     description: 'Transform any text into flowing cursive Unicode script instantly.',
-    icon: '🌀',
+    icon: 'C',
   },
   {
     href: '/handwriting-font-preview',
     label: 'Font Showcase',
     description: 'Preview all 20+ handwriting fonts side by side before you generate.',
-    icon: '🔤',
+    icon: 'F',
   },
 ];
 
@@ -77,7 +77,7 @@ const tools = ALL_TOOLS.filter(t => t.href !== current);
     {heading}
   </h2>
   <p class="text-center text-xs text-mute font-mono mb-8">
-    Free online handwriting tools — no sign-up, all client-side.
+    Free online handwriting tools - no sign-up, all client-side.
   </p>
 
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -92,7 +92,7 @@ const tools = ALL_TOOLS.filter(t => t.href !== current);
             {tool.badge}
           </span>
         )}
-        <span class="text-xl leading-none select-none" aria-hidden="true">{tool.icon}</span>
+        <span class="flex h-7 w-7 items-center justify-center rounded border border-hairline bg-canvas-soft text-xs font-mono font-bold leading-none text-primary select-none" aria-hidden="true">{tool.icon}</span>
         <span class="text-xs font-semibold font-mono text-primary group-hover:text-link transition-colors leading-snug mt-0.5">
           {tool.label}
         </span>
@@ -100,7 +100,7 @@ const tools = ALL_TOOLS.filter(t => t.href !== current);
           {tool.description}
         </span>
         <span class="text-[10px] font-mono text-link mt-auto pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          Open →
+          Open
         </span>
       </a>
     ))}

@@ -108,7 +108,7 @@ export default function FontPreviewApp() {
                 className="text-[10px] font-mono text-link hover:underline font-semibold flex items-center space-x-1"
               >
                 <span>USE FONT IN CONVERTER</span>
-                <span>→</span>
+                <span>Open</span>
               </a>
             </div>
           </div>

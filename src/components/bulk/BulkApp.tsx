@@ -4,8 +4,7 @@ import {
   RefreshCw, Check, Info, FileSpreadsheet, Eye
 } from 'lucide-react';
 import { FONTS, getDefaultBaselineOffset } from '../../lib/fonts';
-import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
-import JSZip from 'jszip';
+import { createPdfFromImages, downloadBlob } from '../../lib/exporter';
 
 function Toast({ toast }: { toast: { message: string; isError?: boolean } | null }) {
   if (!toast) return null;
@@ -388,10 +387,11 @@ export default function BulkApp() {
   const handleExportZip = async () => {
     const renderedDocs = docs.filter(d => d.renderedPages && d.renderedPages.length > 0);
     if (renderedDocs.length === 0) {
-      alert('No documents have been rendered yet.');
+      showToast('No documents have been rendered yet.', true);
       return;
     }
 
+    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     const docDigits = Math.max(2, String(renderedDocs.length).length);
 
@@ -415,7 +415,7 @@ export default function BulkApp() {
   const handleExportCombinedPdf = async () => {
     const renderedDocs = docs.filter(d => d.renderedPages && d.renderedPages.length > 0);
     if (renderedDocs.length === 0) {
-      alert('No documents have been rendered yet.');
+      showToast('No documents have been rendered yet.', true);
       return;
     }
 
@@ -433,7 +433,7 @@ export default function BulkApp() {
       downloadBlob(pdfBlob, `${filenamePrefix}-combined.pdf`);
     } catch (e) {
       console.error(e);
-      alert('Failed to generate combined PDF.');
+      showToast('Failed to generate combined PDF.', true);
     }
   };
 
@@ -441,10 +441,11 @@ export default function BulkApp() {
   const handleExportSeparatePdfsZip = async () => {
     const renderedDocs = docs.filter(d => d.renderedPages && d.renderedPages.length > 0);
     if (renderedDocs.length === 0) {
-      alert('No documents have been rendered yet.');
+      showToast('No documents have been rendered yet.', true);
       return;
     }
 
+    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     const docDigits = Math.max(2, String(renderedDocs.length).length);
 
@@ -497,7 +498,7 @@ export default function BulkApp() {
       <div className="border-b border-hairline pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-primary uppercase font-mono">Bulk Handwriting Generator</h1>
-          <p className="text-xs text-body font-mono mt-1">Text to Handwriting queue renderer. Run multiple text files or rows in parallel.</p>
+          <p className="text-xs text-body font-mono mt-1">Text to Handwriting queue renderer. Run multiple text files or rows in a background queue.</p>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -928,12 +929,12 @@ export default function BulkApp() {
                 onClick={() => { setActiveDocPreview(null); setActiveDocPreviewUrls([]); }}
                 className="text-mute hover:text-primary font-bold text-sm"
               >
-                Close ×
+                Close
               </button>
             </div>
 
             {/* Modal preview image */}
-            <div className="bg-neutral-200 p-4 rounded flex justify-center border border-hairline max-h-[60vh] overflow-y-auto">
+            <div className="bg-neutral-200 dark:bg-neutral-800 p-4 rounded flex justify-center border border-hairline max-h-[60vh] overflow-y-auto">
               <img
                 src={activeDocPreviewUrls[previewPageIdx]}
                 alt="page preview"

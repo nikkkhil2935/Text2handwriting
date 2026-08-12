@@ -25,9 +25,9 @@ import AdSlot from '../../components/common/AdSlot.astro';
         <article class="border border-hairline bg-canvas rounded-lg p-6 flex flex-col gap-4 shadow-sm hover:shadow-md hover:border-hairline-strong transition-all relative group">
           <div class="flex items-center space-x-2 text-[10px] font-mono text-mute">
             <span>{post.date}</span>
-            <span>•</span>
+            <span>|</span>
             <span>{post.readTime}</span>
-            <span>•</span>
+            <span>|</span>
             <span class="bg-canvas-soft-2 px-2 py-0.5 rounded text-primary uppercase font-semibold">{post.category}</span>
           </div>
 
@@ -42,7 +42,7 @@ import AdSlot from '../../components/common/AdSlot.astro';
             class="text-[10px] font-mono text-link hover:underline font-semibold flex items-center space-x-1 justify-end mt-2"
           >
             <span>READ ARTICLE</span>
-            <span>→</span>
+            <span>Open</span>
           </a>
         </article>
       ))}

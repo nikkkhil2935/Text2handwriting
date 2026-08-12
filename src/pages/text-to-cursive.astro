@@ -60,8 +60,8 @@ const pageSchema = {
 ---
 
 <BaseLayout 
-  title="Text to Cursive Converter - Text to Handwriting"
-  description="Convert typed text to cursive handwriting online. Pick from 8+ cursive fonts, adjust slant and spacing, and download printable PNG/PDF. Free, no sign-up."
+  title="Text to Cursive Converter - Free Cursive Handwriting Generator"
+  description="Convert typed text to cursive handwriting online. Select from 8+ cursive fonts, adjust slant and ligature spacing, and download printable PNG or PDF."
   activeTab="cursive"
   showHeroGradient={true}
   fullWidth={true}
@@ -77,60 +77,67 @@ const pageSchema = {
 
     <ConverterApp client:load defaultFont="Dancing Script" defaultPaper="single-ruled" />
 
-    <!-- Rich SEO Content Section -->
+    <!-- Rich SEO Content Section (Comprehensive 850+ Words) -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
+      <div class="text-center space-y-2">
+        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-primary uppercase font-mono">The Ultimate Cursive Handwriting Guide</h2>
+        <p class="text-xs text-mute font-mono max-w-2xl mx-auto">Master digital cursive script conversion, ligature connections, ink bleed textures, and printable handwriting practice worksheets.</p>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Convert Typed Text to Cursive Handwriting Online</h2>
+          <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">1. Convert Typed Text to Cursive Handwriting Online</h3>
           <p>
-            Need to transform digital text into flowing cursive script? Our <strong>text to cursive writing converter</strong> lets you type or paste any text and instantly render it in beautiful cursive fonts. Whether you are preparing a handwritten letter, creating cursive practice sheets for students, or generating elegant invitations, this tool handles it all in your browser.
+            Cursive handwriting represents a timeless artform, combining continuous letter ligatures and flowing strokes to create elegant text. Our <strong>text to cursive writing converter</strong> allows you to paste typed prose and instantly render it into natural cursive script. Whether you are drafting personal letters, crafting wedding invitations, or generating study notes, our engine renders realistic cursive directly in your browser.
           </p>
           <p>
-            Unlike standard font generators that produce static output, our converter applies realistic slant variations, baseline drift, and pen pressure effects so your cursive text looks like it was written by hand with a fountain pen.
+            Unlike static font renderers that repeat identical character shapes, our converter injects per-character slant offsets, baseline drift, and ink pressure simulation to give cursive text the authentic look of manual penmanship.
           </p>
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Cursive Handwriting Generator for Kids</h2>
+          <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">2. Cursive Handwriting Generator for Kids & Practice</h3>
           <p>
-            Learning cursive is an important milestone for young students. Our <strong>cursive handwriting generator for kids</strong> provides double-ruled practice paper templates with guided baselines. Children can type their spelling words, vocabulary lists, or sentences and see them rendered in kid-friendly cursive fonts like Cedarville Cursive and Homemade Apple.
+            Learning cursive is a vital fine-motor development exercise for young students. Our <strong>cursive handwriting generator for kids</strong> includes specialized double-ruled paper templates featuring top, middle, and baseline guide lines.
           </p>
           <p>
-            Parents and teachers can print these as <strong>cursive font generator for handwriting practice</strong> worksheets. Simply type the text, select a practice-friendly cursive font, choose the double-ruled paper, and download the PDF for printing.
+            Parents and teachers can generate customized practice sheets by typing vocabulary words or sentence lists, choosing kid-friendly cursive fonts (such as <em>Cedarville Cursive</em> or <em>Homemade Apple</em>), and exporting high-resolution PDFs for classroom printing.
           </p>
         </div>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Type Text and Make It Cursive Font Image</h2>
+        <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">3. How to Connect Cursive Ligatures Dynamically</h3>
         <p>
-          Our <strong>online cursive writing converter free</strong> tool renders your text as a high-resolution image that you can download, share, or print. Choose from eight distinct cursive styles ranging from casual handwriting to formal calligraphy. Adjust the ink color to match real pen colors — royal blue for everyday writing, black for formal documents, or red for corrections.
+          A common flaw in digital handwriting fonts is that cursive loops do not touch correctly, creating visible gaps between letters. To achieve continuous connected script:
         </p>
-        <p>
-          For the most <strong>convert typed text to cursive handwriting online</strong> experience, enable the realism engine. This adds subtle character rotations between plus or minus 2 degrees, slight horizontal jitter, and natural baseline wobble that mimics how real cursive flows across unlined paper.
-        </p>
+        <ol class="list-decimal pl-5 space-y-1.5">
+          <li><strong>Letter Spacing Adjustment:</strong> Set letter-spacing to a subtle negative offset (between <code>-0.5px</code> and <code>-1.5px</code>) to draw glyphs closer together.</li>
+          <li><strong>Fountain Pen Texture:</strong> Choose <em>Fountain Blue</em> or <em>Fountain Black</em> ink presets. These include a subtle micro-bleed texture that fills microscopic vector gaps between letters.</li>
+          <li><strong>Baseline Stabilization:</strong> Lower the vertical jitter parameter to under <code>0.8px</code> so glyph baselines align precisely, enabling cursive tails to join naturally.</li>
+        </ol>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Cursive vs Print: When to Use Each Style</h2>
+        <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">4. High-Res PNG & PDF Cursive Exports</h3>
         <p>
-          Cursive writing excels in personal correspondence, formal letters, wedding invitations, and creative projects where elegance matters. Print style is better for school assignments, technical notes, and situations where legibility is the top priority. For a deeper comparison, see our guide on <a href="/blog" class="text-link hover:underline">handwriting styles for assignments</a>.
+          Export your rendered cursive sheets in high-resolution PNG format at 300 DPI for graphics projects, or as multi-page vector-embedded PDFs for printing. All rendering happens completely client-side in your browser, guaranteeing total privacy.
         </p>
         <p>
-          Want to see how different cursive fonts compare side by side? Visit the <a href="/handwriting-font-preview" class="text-link hover:underline">handwriting font preview page</a> to test all 20+ fonts with your custom text. You can also create a personalized <a href="/signature-generator" class="text-link hover:underline">signature generator</a> using cursive script styles.
+          For general print handwriting, use the main <a href="/" class="text-link hover:underline font-semibold">text converter</a>. To generate formal electronic signatures, try the <a href="/signature-generator" class="text-link hover:underline font-semibold font-mono">signature generator</a>, or compare cursive fonts side-by-side on our <a href="/handwriting-font-preview" class="text-link hover:underline font-semibold font-mono">font preview catalog</a>.
         </p>
       </div>
 
       <!-- FAQ Accordions -->
       <div class="pt-8 border-t border-hairline space-y-6">
-        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <h3 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h3>
         <div class="space-y-3">
           {CURSIVE_FAQS.map(faq => (
             <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
               <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
                 <span>{faq.q}</span>
-                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">v</span>
               </summary>
               <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
                 <p>{faq.a}</p>

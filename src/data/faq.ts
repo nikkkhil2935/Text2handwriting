@@ -14,7 +14,7 @@ export const FAQS: FAQItem[] = [
   },
   {
     q: 'Can I insert images or formulas into my handwritten document?',
-    a: 'Yes, you can upload diagrams, sketches, and signatures directly onto the live canvas preview. You can also insert mathematical equations using LaTeX notation, which gets rendered with KaTeX. All elements can be dragged, resized, and positioned anywhere on the page.'
+    a: 'Yes, you can upload diagrams, sketches, and signatures directly onto the live canvas preview. You can also insert mathematical equations using LaTeX notation, which you can preview live with KaTeX before inserting. All elements can be dragged, resized, and positioned anywhere on the page.'
   },
   {
     q: 'How do I download my handwriting as a PDF?',
@@ -42,7 +42,7 @@ export const FAQS: FAQItem[] = [
   },
   {
     q: 'Is there a bulk generator for multiple documents?',
-    a: 'Yes, our bulk generator page allows you to paste multiple documents separated by delimiters, upload CSV sheets, or load text files in parallel. It uses browser Web Workers to process document batches in the background.'
+    a: 'Yes, our bulk generator page allows you to paste multiple documents separated by delimiters, upload CSV sheets, or load text files. It uses browser Web Workers to process document batches in the background.'
   },
   {
     q: 'Can I write in cursive?',

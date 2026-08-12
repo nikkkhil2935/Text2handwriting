@@ -29,7 +29,29 @@ const contactSchema = {
       <div class="bg-canvas border border-hairline rounded-lg p-6 md:p-8 space-y-6 shadow-sm">
         <h3 class="text-xs font-mono font-bold uppercase text-primary">Submit a Message</h3>
 
-        <form action="https://formspree.io/f/placeholder_id" method="POST" class="space-y-4 text-xs md:text-sm">
+        <div id="success-card" class="hidden text-center py-8 space-y-4">
+          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-link rounded-full flex items-center justify-center mx-auto">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-sm font-bold text-primary font-mono uppercase">Message Drafted Successfully</h4>
+            <p class="text-xs text-body leading-relaxed max-w-md mx-auto">
+              Your message has been formatted. If your email application did not open automatically, please send your email directly to <a href="mailto:support@texttohandwriting.me" class="text-link hover:underline">support@texttohandwriting.me</a>.
+            </p>
+          </div>
+          <div>
+            <button
+              id="reset-form-btn"
+              class="px-4 py-2 border border-hairline bg-canvas hover:bg-canvas-soft-2 text-mute hover:text-primary rounded font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+            >
+              Send Another Message
+            </button>
+          </div>
+        </div>
+
+        <form id="contact-form" class="space-y-4 text-xs md:text-sm">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-1">
               <label for="name" class="block font-mono font-bold text-primary text-[10px] uppercase">Your Name</label>
@@ -90,11 +112,49 @@ const contactSchema = {
         </form>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <script is:inline>
+        (function() {
+          const form = document.getElementById('contact-form');
+          const successCard = document.getElementById('success-card');
+          const resetBtn = document.getElementById('reset-form-btn');
+
+          if (!form || !successCard) return;
+
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
+
+            // Formulate mailto link
+            const bodyText = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
+            const mailtoUrl = `mailto:support@texttohandwriting.me?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+            
+            // Open the mail application in background
+            window.location.href = mailtoUrl;
+
+            // Toggle views
+            form.classList.add('hidden');
+            successCard.classList.remove('hidden');
+          });
+
+          if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+              form.reset();
+              successCard.classList.add('hidden');
+              form.classList.remove('hidden');
+            });
+          }
+        })();
+      </script>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="border border-hairline p-5 rounded bg-canvas-soft space-y-2">
           <h4 class="font-bold text-primary font-mono text-xs uppercase">Direct Email Support</h4>
           <p class="text-xs text-body leading-relaxed">
-            Prefer direct email? Send your technical queries or custom handwriting requests to:
+            Prefer direct email? Send technical queries or custom handwriting font requests to:
           </p>
           <p class="text-xs font-mono font-bold text-primary">
             <code>support@texttohandwriting.me</code>
@@ -102,9 +162,16 @@ const contactSchema = {
         </div>
 
         <div class="border border-hairline p-5 rounded bg-canvas-soft space-y-2">
+          <h4 class="font-bold text-primary font-mono text-xs uppercase">Support Response SLA</h4>
+          <p class="text-xs text-body leading-relaxed">
+            Our support team monitors incoming messages continuously. We aim to respond to all technical queries within <strong>24 to 48 hours</strong>.
+          </p>
+        </div>
+
+        <div class="border border-hairline p-5 rounded bg-canvas-soft space-y-2">
           <h4 class="font-bold text-primary font-mono text-xs uppercase">Report an Issue</h4>
           <p class="text-xs text-body leading-relaxed">
-            Encountered a bug with canvas rendering, table wiggles, or PDF exports? Fill out our form or mention the browser version you are using.
+            Encountered a bug with canvas rendering or PDF exports? Mention your browser name and OS version in your message for faster resolution.
           </p>
         </div>
       </div>

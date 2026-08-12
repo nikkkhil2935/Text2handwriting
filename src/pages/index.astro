@@ -40,8 +40,8 @@ const pageSchema = {
 ---
 
 <BaseLayout 
-  title="Text to Handwriting Converter - Free Online Tool"
-  description="Convert typed text to realistic handwriting instantly. Free online tool with 20+ fonts, custom margins, and PDF export. No sign-up required."
+  title="Text to Handwriting Converter - Free Online Realism Generator"
+  description="Convert typed text to realistic handwriting instantly. Free online text-to-handwriting generator with 20+ fonts, custom margins, and 300 DPI PDF export."
   activeTab="home"
   showHeroGradient={true}
   fullWidth={true}
@@ -67,7 +67,7 @@ const pageSchema = {
           In an era dominated by uniform, sterile digital typography, handwriting retains a unique human touch. A handwritten note, letter, or assignment conveys a level of care, personality, and focus that simple emails or Word documents cannot match. Whether it is a personal thank-you card, a school assignment requiring a natural touch, or creative journals, the texture of ink on paper builds a stronger connection. 
         </p>
         <p>
-          Our **Text to Handwriting Converter** bridges the gap between digital efficiency and analog charm. Rather than spending hours copying notes manually, you can draft your text digitally and convert it into a highly realistic handwritten document in seconds. By mimicking character variations, baseline shifts, and ink smudge characteristics, our tool delivers an authentic appearance that is virtually indistinguishable from manual writing.
+          Our <strong>Text to Handwriting Converter</strong> bridges the gap between digital efficiency and analog charm. Rather than spending hours copying notes manually, you can draft your text digitally and convert it into a highly realistic handwritten document in seconds. By mimicking character variations, baseline shifts, and ink smudge characteristics, our tool delivers an authentic appearance that is virtually indistinguishable from manual writing.
         </p>
       </div>
 
@@ -89,7 +89,7 @@ const pageSchema = {
           Unlike basic digital handwriting fonts which look repeating and artificial, our generator utilizes a dynamic <strong>browser-worker realism engine</strong>. Key features include:
         </p>
         <ul class="list-disc pl-5 space-y-1">
-          <li><strong>True LaTeX Math Rendering:</strong> Write physics and mathematics equations using standard LaTeX syntax, which are rendered to PNGs with absolute font paths to prevent broken characters in export.</li>
+          <li><strong>LaTeX Math Support:</strong> Write physics and mathematics equations using standard LaTeX syntax, preview them live with KaTeX, and insert them as natural inline text in your document.</li>
           <li><strong>Hand-Drawn Grid Tables:</strong> Construct custom wobbly grid tables that match the selected ink color and look sketched by hand instead of perfectly straight.</li>
           <li><strong>Direct PDF Text Extraction:</strong> Upload your PDF files, and our client-side text extractor will parse the content, preserve the line spacing, and insert it directly at your cursor.</li>
           <li><strong>Ruled Margin Alignment:</strong> Set line-ruled page margins and shift text baselines (using <em>Vertical Position</em> sliders) to keep text sitting perfectly on ruling lines.</li>
@@ -120,14 +120,14 @@ const pageSchema = {
       <div class="space-y-4">
         <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">6. Ethical Use Policy & Academic Disclaimer</h2>
         <p>
-          While our Text to Handwriting Converter is a valuable tool for formatting, presentation, and creative designs, it must be used responsibly. We strongly advocate for academic honesty and integrity. This tool is designed to assist with formatting presentation-grade notes, creative journaling, and layout mockups. It is **not** intended to violate the explicit guidelines of educational institutions. If your school or university strictly requires manual handwriting as a form of assessment or exam, using digital tools to simulate writing is at your own discretion, and we encourage students to follow their institutional policies.
+          While our Text to Handwriting Converter is a valuable tool for formatting, presentation, and creative designs, it must be used responsibly. We strongly advocate for academic honesty and integrity. This tool is designed to assist with formatting presentation-grade notes, creative journaling, and layout mockups. It is <strong>not</strong> intended to violate the explicit guidelines of educational institutions. If your school or university strictly requires manual handwriting as a form of assessment or exam, using digital tools to simulate writing is at your own discretion, and we encourage students to follow their institutional policies.
         </p>
       </div>
 
       <div class="space-y-4">
         <h2 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">7. Start Creating Authentic Handwritten Notes Today</h2>
         <p>
-          Ready to experience the ultimate blend of digital speed and analog aesthetics? Start typing in the sheet editor above, choose your handwriting style, adjust your paper settings, and click **Generate Realistic Image** to see the magic happen. Download your work as print-ready PDFs or zips and save time today!
+          Ready to experience the ultimate blend of digital speed and analog aesthetics? Start typing in the sheet editor above, choose your handwriting style, adjust your paper settings, and click <strong>Generate Realistic Image</strong> to see the magic happen. Download your work as print-ready PDFs or zips and save time today!
         </p>
       </div>
 
@@ -139,7 +139,7 @@ const pageSchema = {
             <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
               <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
                 <span>{faq.q}</span>
-                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">v</span>
               </summary>
               <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
                 <p>{faq.a}</p>

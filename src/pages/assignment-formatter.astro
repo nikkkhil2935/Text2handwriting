@@ -60,8 +60,8 @@ const pageSchema = {
 ---
 
 <BaseLayout 
-  title="Assignment Handwriting Maker - Text to Handwriting"
-  description="Make typed assignments look handwritten with name and date. Free online tool with lined margins, header fields, and print-ready PDF export."
+  title="Assignment Handwriting Maker - Convert Homework to Handwriting"
+  description="Make typed assignments look handwritten with student name and date. Free online assignment formatter with lined margins and high-DPI PDF export."
   activeTab="assignment"
   showHeroGradient={true}
   fullWidth={true}
@@ -77,66 +77,71 @@ const pageSchema = {
 
     <ConverterApp client:load defaultFont="Architects Daughter" defaultPaper="a4-notebook" isAssignmentMode={true} />
 
-    <!-- Rich SEO Content Section -->
+    <!-- Rich SEO Content Section (Comprehensive 850+ Words) -->
     <div class="max-w-4xl mx-auto py-12 px-4 border-t border-hairline space-y-8 text-body text-xs md:text-sm leading-relaxed">
       
+      <div class="text-center space-y-2">
+        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-primary uppercase font-mono">Academic Assignment Handwriting Guide</h2>
+        <p class="text-xs text-mute font-mono max-w-2xl mx-auto">Learn how to convert typed essays, lab files, and homework into presentation-grade handwritten assignments formatted with student headers.</p>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Make Typed Assignment Look Handwritten with Name and Date</h2>
+          <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">1. Make Typed Assignments Look Handwritten with Headers</h3>
           <p>
-            Students are frequently faced with the tedious chore of handwriting massive practical files, lab summaries, and homework sheets. Our <strong>assignment handwriting maker</strong> solves this by letting you type your content and rendering it as realistic handwriting — complete with name, date, and subject headers on every page.
+            Students across schools, colleges, and technical universities are frequently tasked with writing long practical lab records, project reports, and homework assignments by hand. Our <strong>assignment handwriting maker</strong> simplifies this by enabling you to draft text digitally while outputting realistic handwritten pages complete with authentic student headers.
           </p>
           <p>
-            Open the Headers panel, enable the Assignment Cover Header, and fill in your student details. The tool places these fields at the top margin of every page, exactly like how teachers expect handwritten assignments to be formatted.
+            By enabling the Assignment Header panel, you can insert your Full Name, Subject Code, Submission Date, Teacher Name, and Roll Number directly at the top margin of every page, matching institutional presentation standards.
           </p>
         </div>
 
         <div class="space-y-4">
-          <h2 class="text-base font-semibold text-primary font-mono">Handwriting Generator for School Assignments</h2>
+          <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">2. Selecting the Best Academic Handwriting Font</h3>
           <p>
-            When creating assignment sheets, legibility for teachers represents the top priority. Avoid complex signature scripts and instead use neat handwriting variants:
+            When submitting school assignments, legibility is paramount. Using decorative or overly slanted cursive fonts makes homework difficult for teachers to read and grade. We recommend these clean print font styles:
           </p>
           <ul class="list-disc pl-5 space-y-1">
-            <li><strong>Architects Daughter:</strong> The standard academic printing font. Highly legible, clean layout, and matches classical school notebooks.</li>
-            <li><strong>Kalam:</strong> A neat Indian handwriting style. Excellent spacing and looks authentic.</li>
-            <li><strong>Patrick Hand:</strong> A rounded, clean printing font. Feels very natural.</li>
-            <li><strong>Amita:</strong> Designed for assignments requiring both English and Devanagari (Hindi) scripts.</li>
+            <li><strong>Architects Daughter:</strong> The standard academic printing font. Highly legible, well-proportioned, and replicates clean student penmanship.</li>
+            <li><strong>Kalam:</strong> A natural handwriting style with subtle character variations. Excellent for both English and bilingual content.</li>
+            <li><strong>Patrick Hand:</strong> A friendly, rounded font ideal for junior school notes and literature homework.</li>
+            <li><strong>Amita:</strong> Optimized for assignments requiring both English and Devanagari (Hindi) scripts.</li>
           </ul>
         </div>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Fake Handwriting for Homework with Header Format</h2>
+        <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">3. Formatting Guidelines for Ruled Notebook Papers</h3>
         <p>
-          To make your <strong>online tool to format handwritten homework</strong> output look authentic, alignment to notebook rules is key:
+          To make digital output look completely handwritten, precise alignment to notebook guidelines is required:
         </p>
-        <ol class="list-decimal pl-5 space-y-1.5">
-          <li><strong>Ruled Spacing:</strong> Set your paper background to <em>A4 Notebook Ruled</em> and adjust the line size to match your font size. Standard ruled sheets use 30px guidelines.</li>
-          <li><strong>Define Left Margin:</strong> Ensure you enable the red margin line. This aligns the start of your lines and provides space for index numbers and teacher remarks.</li>
-          <li><strong>Header Fields:</strong> Include student name, subject title, and date in the page header text field to render them at the top margin of every page.</li>
-          <li><strong>Page Numbering:</strong> Enable footers formatted as <code>{"Page {page} of {pages}"}</code> to keep multi-page document bundles organized.</li>
+        <ol class="list-decimal pl-5 space-y-2">
+          <li><strong>Rule Line Alignment:</strong> Select <em>A4 Notebook Ruled</em> and adjust line height (typically 30px) so your text sits naturally on the horizontal ruling lines without floating or overlapping.</li>
+          <li><strong>Red Left Margin Line:</strong> Enable the red vertical margin line. This aligns line origins and leaves space for question numbers and evaluation marks.</li>
+          <li><strong>Realism Parameters:</strong> Set character slant variation to ±2 degrees, baseline drift to 1.0px, and opacity jitter between 85% and 100% to simulate pen pressure variations.</li>
+          <li><strong>Dynamic Page Footers:</strong> Configure footers formatted as <code>Page &#123;page&#125; of &#123;pages&#125;</code> to maintain pagination across multi-page files.</li>
         </ol>
       </div>
 
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-primary font-mono">Convert Essay to Handwritten Assignment Format</h2>
+        <h3 class="text-base font-semibold text-primary font-mono uppercase tracking-tight">4. High-DPI PDF Exports & Physical Printing Setup</h3>
         <p>
-          Paste your essay or report text into the editor. The system auto-paginates across multiple pages, applying consistent ruled lines and margins. For the best print results, export at <strong>300 DPI (3x Quality)</strong>. This produces sharp curves, smooth ink blending, and authentic-looking output on physical paper.
+          Exporting at standard screen resolution produces pixelated lines when printed on paper. Always select <strong>300 DPI (3x Quality)</strong> and export as a PDF document. High-DPI exports preserve natural ink textures, fine rule lines, and subtle character jitter.
         </p>
         <p>
-          For converting essays in bulk, use the <a href="/bulk-generator" class="text-link hover:underline">bulk generator</a>. To preview available handwriting fonts, visit the <a href="/handwriting-font-preview" class="text-link hover:underline">font preview page</a>. Need a custom signature for your assignment? Try the <a href="/signature-generator" class="text-link hover:underline">signature generator</a>.
+          For multi-document batches, use the <a href="/bulk-generator" class="text-link hover:underline font-semibold">bulk generator</a>. To compare font options side-by-side, visit the <a href="/handwriting-font-preview" class="text-link hover:underline font-semibold font-mono">font preview catalog</a>. For digital signatures on cover sheets, use the <a href="/signature-generator" class="text-link hover:underline font-semibold font-mono">signature generator</a>.
         </p>
       </div>
 
       <!-- FAQ Accordions -->
       <div class="pt-8 border-t border-hairline space-y-6">
-        <h2 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h2>
+        <h3 class="text-lg font-bold tracking-tight text-primary uppercase font-mono text-center">Frequently Asked Questions</h3>
         <div class="space-y-3">
           {ASSIGNMENT_FAQS.map(faq => (
             <details class="group border border-hairline bg-canvas rounded-lg transition-all [&_summary::-webkit-details-marker]:hidden">
               <summary class="flex justify-between items-center font-mono font-semibold text-xs text-primary p-4 cursor-pointer select-none">
                 <span>{faq.q}</span>
-                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">↓</span>
+                <span class="text-mute group-open:rotate-180 transition-transform font-bold text-xs leading-none">v</span>
               </summary>
               <div class="px-4 pb-4 pt-0 text-xs text-body leading-relaxed border-t border-hairline/50 mt-1 pt-2">
                 <p>{faq.a}</p>
