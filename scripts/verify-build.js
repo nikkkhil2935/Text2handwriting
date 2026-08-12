@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getSiteBaseFromSitemap, buildSitemapIndexXml } from './lib/sitemap.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, '../dist');
@@ -195,7 +196,7 @@ function verifyHtmlFile(filePath) {
   }
 }
 
-// Clean up sitemap files by merging/renaming Astro's split files into a single sitemap.xml
+// Ensure sitemap files are available at both sitemap.xml and sitemap-index.xml for crawler compatibility
 function cleanupSitemaps() {
   console.log(`\n${BOLD}=== Cleaning up Sitemaps ===${RESET}`);
   const sitemapIndex = path.join(DIST_DIR, 'sitemap-index.xml');
@@ -205,13 +206,15 @@ function cleanupSitemaps() {
   if (fs.existsSync(sitemap0)) {
     try {
       fs.copyFileSync(sitemap0, sitemapTarget);
-      logSuccess(`Created unified sitemap.xml from sitemap-0.xml.`);
+      // Write a real sitemap index pointing at the unified sitemap.xml
+      const sitemapContent = fs.readFileSync(sitemap0, 'utf-8');
+      const siteBase = getSiteBaseFromSitemap(sitemapContent);
+      const sitemapIndexXml = buildSitemapIndexXml(siteBase);
+      fs.writeFileSync(sitemapIndex, sitemapIndexXml);
+      logSuccess(`Created unified sitemap.xml and sitemap-index.xml from sitemap-0.xml.`);
       
       fs.unlinkSync(sitemap0);
-      if (fs.existsSync(sitemapIndex)) {
-        fs.unlinkSync(sitemapIndex);
-      }
-      logSuccess(`Cleaned up sitemap-index.xml and sitemap-0.xml.`);
+      logSuccess(`Cleaned up temporary sitemap-0.xml.`);
     } catch (err) {
       logError(`Failed to cleanup sitemaps: ${err.message}`);
     }

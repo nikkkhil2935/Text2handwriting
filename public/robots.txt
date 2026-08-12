@@ -4,3 +4,4 @@ Disallow: /404
 Disallow: /500
 
 Sitemap: https://texttohandwriting.me/sitemap.xml
+Sitemap: https://texttohandwriting.me/sitemap-index.xml

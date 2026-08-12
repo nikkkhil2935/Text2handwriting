@@ -1,6 +1,6 @@
 {
   "name": "Text To Handwriting",
-  "short_name": "Text",
+  "short_name": "Handwriting",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

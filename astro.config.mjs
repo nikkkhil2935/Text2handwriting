@@ -16,7 +16,6 @@ export default defineConfig({
       filter: (page) => !page.includes('/404') && !page.includes('/500'),
       changefreq: 'weekly',
       priority: 0.7,
-      lastmod: new Date(),
       serialize(item) {
         // Higher priority for core tool pages
         if (item.url === 'https://texttohandwriting.me/') {
