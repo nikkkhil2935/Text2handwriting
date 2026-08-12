@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import CookieConsent from '../components/common/CookieConsent.astro';
 
 interface Props {
   title: string;
@@ -48,14 +49,37 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
 <!doctype html>
 <html lang="en" class="scroll-smooth">
   <head>
-    <!-- Google tag (gtag.js) -->
-    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-TEY89MX99W"></script>
+    <!-- Google tag (gtag.js) — deferred until cookie consent is given. The
+         AdSense SDK is NOT loaded here: ad-slot components load it lazily,
+         consent-gated, only on pages that actually render an ad unit. -->
     <script is:inline>
+      // Analytics stay off until the user accepts in the cookie banner.
+      // The dataLayer/gtag stub remains active so any gtag() calls are queued and
+      // replayed once the real script loads (standard GA behavior).
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
 
-      gtag('config', 'G-TEY89MX99W');
+      window.__loadAnalytics = function () {
+        if (window.__analyticsLoaded) return;
+        window.__analyticsLoaded = true;
+
+        var gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-TEY89MX99W';
+        document.head.appendChild(gtagScript);
+        gtag('js', new Date());
+        gtag('config', 'G-TEY89MX99W');
+      };
+
+      (function () {
+        try {
+          if (localStorage.getItem('cookie-consent') === 'accepted') {
+            window.__loadAnalytics();
+          }
+        } catch (e) {
+          // localStorage unavailable — keep third-party scripts off
+        }
+      })();
     </script>
 
     <meta charset="UTF-8" />
@@ -68,6 +92,9 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="generator" content={Astro.generator} />
     <meta name="msvalidate.01" content="535FF23B7A4B19C33E26225541987ADC" />
+
+    <!-- Google AdSense account declaration (no scripts load until consent) -->
+    <meta name="google-adsense-account" content="ca-pub-9725731987817847" />
 
     <!-- Google Fonts Preconnect and Prefetch -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -278,5 +305,6 @@ const breadcrumbSchema = urlPaths.length > 0 ? {
         });
       });
     </script>
+    <CookieConsent />
   </body>
 </html>

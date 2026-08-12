@@ -1,5 +1,5 @@
 ---
-import { AD_CONFIGS } from '../../config/ads';
+import { AD_CONFIGS, AD_CLIENT } from '../../config/ads';
 
 interface Props {
   slotId: string;
@@ -13,11 +13,12 @@ const { slotId, size, enabled } = Astro.props;
 const config = AD_CONFIGS[slotId];
 const isEnabled = enabled !== undefined ? enabled : (config?.enabled ?? false);
 const adSize = size || config?.size || 'leaderboard';
+const adUnitId = config?.id || slotId;
 
-// Sizing mapping for AdSense container
+// Sizing mapping for the ad container (matches the AdSense unit dimensions)
 let sizeClasses = '';
 if (adSize === 'leaderboard') {
-  sizeClasses = 'w-full max-w-[728px] h-[90px] md:h-[90px] min-h-[90px]';
+  sizeClasses = 'w-full max-w-[728px] h-[90px] min-h-[90px]';
 } else if (adSize === 'rectangle') {
   sizeClasses = 'w-[300px] h-[250px] min-w-[300px] min-h-[250px]';
 } else if (adSize === 'sidebar') {
@@ -28,14 +29,75 @@ if (adSize === 'leaderboard') {
 ---
 
 {isEnabled && (
-  <div 
-    id={`ad-${slotId}`} 
-    class={`bg-canvas-soft-2 border border-hairline flex items-center justify-center text-xs text-mute rounded ${sizeClasses} ${config?.className || ''}`}
+  <div
+    id={`ad-${slotId}`}
+    class={`${sizeClasses} ${config?.className || ''}`}
+    data-ad-client={AD_CLIENT}
     data-ad-slot={slotId}
   >
-    <div class="text-center font-mono">
-      <div class="text-[10px] uppercase tracking-wider text-mute mb-1">Advertisement</div>
-      <div class="text-body font-semibold">{slotId} ({adSize})</div>
-    </div>
+    <ins
+      class="adsbygoogle w-full"
+      style="display:block"
+      data-ad-client={AD_CLIENT}
+      data-ad-slot={adUnitId}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    ></ins>
   </div>
+)}
+{isEnabled && (
+  <script is:inline data-slot-key={slotId}>
+    // Lazy, consent-gated AdSense loader. The SDK is fetched only when a slot
+    // is on the page AND the user has accepted cookies — never on every page,
+    // and never before consent. Declined users make zero requests to Google.
+    // Values (slot key, client ID) come from data attributes on the rendered
+    // markup because Astro emits inline scripts verbatim (no interpolation).
+    (function () {
+      var key = document.currentScript && document.currentScript.getAttribute('data-slot-key');
+      var container = key && document.getElementById('ad-' + key);
+      if (!container) return;
+      var clientId = container.getAttribute('data-ad-client');
+      if (!clientId) return;
+
+      // Shared, idempotent SDK loader — injects the script once per page.
+      window.__adsenseLoader = window.__adsenseLoader || {
+        loading: false,
+        loaded: false,
+        start: function () {
+          if (window.__adsenseLoader.loading || window.__adsenseLoader.loaded) return;
+          window.__adsenseLoader.loading = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.crossOrigin = 'anonymous';
+          s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + clientId;
+          s.onload = function () {
+            window.__adsenseLoader.loading = false;
+            window.__adsenseLoader.loaded = true;
+          };
+          s.onerror = function () {
+            window.__adsenseLoader.loading = false;
+          };
+          document.head.appendChild(s);
+        }
+      };
+
+      function activate() {
+        window.__adsenseLoader.start();
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      }
+
+      // Slot stays inert (no SDK, no network) until consent is given.
+      try {
+        if (localStorage.getItem('cookie-consent') === 'accepted') {
+          activate();
+          return;
+        }
+      } catch (e) {
+        // localStorage unavailable — leave ads off
+      }
+
+      // Activate when the user accepts in the cookie banner.
+      document.addEventListener('consent:accepted', activate);
+    })();
+  </script>
 )}

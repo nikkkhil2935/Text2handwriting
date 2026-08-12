@@ -1,0 +1,72 @@
+---
+---
+
+<div
+  id="cookie-consent-banner"
+  class="fixed bottom-6 right-6 z-50 max-w-sm w-full bg-canvas/90 backdrop-blur-md border border-hairline rounded-lg p-5 shadow-lg translate-y-12 opacity-0 pointer-events-none transition-all duration-300 ease-out flex flex-col gap-4"
+>
+  <div class="space-y-1">
+    <h4 class="text-xs font-mono font-bold uppercase tracking-wider text-primary flex items-center">
+      <svg class="w-4 h-4 mr-1.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      Cookie Preferences
+    </h4>
+    <p class="text-[11px] leading-relaxed text-body">
+      We use cookies to personalize content and ads, analyze traffic, and ensure you get the best experience on our website. Read our <a href="/privacy-policy" class="text-link hover:underline">Privacy Policy</a> to learn more.
+    </p>
+  </div>
+  <div class="flex items-center gap-2 justify-end text-[10px] font-mono font-semibold">
+    <button
+      id="cookie-decline-btn"
+      class="px-3 py-1.5 border border-hairline bg-canvas hover:bg-canvas-soft-2 text-mute hover:text-primary rounded transition-all cursor-pointer uppercase"
+    >
+      Decline
+    </button>
+    <button
+      id="cookie-accept-btn"
+      class="px-3 py-1.5 border border-primary bg-primary text-on-primary hover:bg-canvas hover:text-primary rounded transition-all cursor-pointer uppercase"
+    >
+      Accept All
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  (function() {
+    const banner = document.getElementById('cookie-consent-banner');
+    const acceptBtn = document.getElementById('cookie-accept-btn');
+    const declineBtn = document.getElementById('cookie-decline-btn');
+
+    if (!banner || !acceptBtn || !declineBtn) return;
+
+    // Check if consent was already given
+    const consent = localStorage.getItem('cookie-consent');
+    if (!consent) {
+      // Show the banner with a slight delay
+      setTimeout(() => {
+        banner.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+      }, 1000);
+    }
+
+    acceptBtn.addEventListener('click', () => {
+      localStorage.setItem('cookie-consent', 'accepted');
+      // Load analytics now that consent was granted. Ad units listen for the
+      // consent event and load the AdSense SDK lazily at the slot sites.
+      if (window.__loadAnalytics) {
+        window.__loadAnalytics();
+      }
+      document.dispatchEvent(new CustomEvent('consent:accepted'));
+      hideBanner();
+    });
+
+    declineBtn.addEventListener('click', () => {
+      localStorage.setItem('cookie-consent', 'declined');
+      hideBanner();
+    });
+
+    function hideBanner() {
+      banner.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+    }
+  })();
+</script>
