@@ -116,28 +116,58 @@ function parseTextToWords(text) {
   return words;
 }
 
-function checkVerticalOverlapAndAdvanceY(currentY, pageIdx, elements, h, mTop, lineStep, scale, _depth) {
-  let y = currentY;
-  const depth = _depth || 0;
-  if (depth > 20) return y; // safety valve against infinite recursion
-  const pageElements = elements ? elements.filter(el => el.pageIndex === pageIdx && el.type !== 'sketch') : [];
-  const sortedElements = [...pageElements].sort((a, b) => a.y - b.y);
-  let advanced = false;
-  for (const el of sortedElements) {
+function getLineFlowSegment(pageIdx, lineY, elements, w, h, mLeft, mRight, lineMarginPadding, lineStep, scale) {
+  const baseLeft = mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale;
+  const baseRight = w - mRight;
+  const minSegmentWidth = 90 * scale;
+  const padding = 12 * scale;
+  const lineTop = lineY - lineStep * 0.85;
+  const lineBottom = lineY + lineStep * 0.25;
+  const blocks = [];
+
+  for (const el of elements || []) {
+    if (el.pageIndex !== pageIdx || el.type === 'sketch') continue;
+
+    const elX = (el.x / 100) * w;
     const elY = (el.y / 100) * h;
+    const elW = (el.width / 100) * w;
     const elH = (el.height / 100) * h;
     const elBottom = elY + elH;
-    const padding = 12 * scale;
-    if (y + lineStep >= elY - padding && y - lineStep <= elBottom + padding) {
-      y = elBottom + padding;
-      y = mTop + Math.ceil((y - mTop) / lineStep) * lineStep;
-      advanced = true;
+
+    if (lineBottom < elY - padding || lineTop > elBottom + padding) continue;
+
+    const blockLeft = Math.max(baseLeft, elX - padding);
+    const blockRight = Math.min(baseRight, elX + elW + padding);
+    if (blockRight > baseLeft && blockLeft < baseRight) {
+      blocks.push({ left: blockLeft, right: blockRight });
     }
   }
-  if (advanced) {
-    return checkVerticalOverlapAndAdvanceY(y, pageIdx, elements, h, mTop, lineStep, scale, depth + 1);
+
+  if (blocks.length === 0) {
+    return { x: baseLeft, width: Math.max(minSegmentWidth, baseRight - baseLeft) };
   }
-  return y;
+
+  blocks.sort((a, b) => a.left - b.left);
+  const segments = [];
+  let cursor = baseLeft;
+
+  for (const block of blocks) {
+    if (block.left > cursor) {
+      segments.push({ x: cursor, width: block.left - cursor });
+    }
+    cursor = Math.max(cursor, block.right);
+  }
+
+  if (cursor < baseRight) {
+    segments.push({ x: cursor, width: baseRight - cursor });
+  }
+
+  const usableSegments = segments.filter(segment => segment.width >= minSegmentWidth);
+  if (usableSegments.length === 0) {
+    return { x: baseLeft, width: Math.max(minSegmentWidth, baseRight - baseLeft) };
+  }
+
+  return usableSegments.reduce((best, segment) => segment.width > best.width ? segment : best, usableSegments[0]);
 }
 
 self.onmessage = async function(e) {
@@ -242,31 +272,56 @@ self.onmessage = async function(e) {
   const measureCtx = measureCanvas.getContext('2d');
   measureCtx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fSize}px "${fontName}"`;
 
-  // 2. Wrap text into lines & paginate
+  // 2. Wrap text into lines & paginate, with line-level flow around positioned elements.
   const paragraphs = text.split('\n');
-  const allWrappedLines = [];
-
   const printableWidth = w - mLeft - mRight;
   const printableHeight = h - mTop - mBottom;
+  const pages = [];
+  let currentPageLines = [];
+  let currentPageY = mTop + lineStep;
+  let pageIdxForFlow = 0;
 
-  for (let i = 0; i < paragraphs.length; i++) {
-    const para = paragraphs[i];
-    
-    // Check manual page break
-    if (para.trim() === '---page break---') {
-      allWrappedLines.push({ type: 'page-break' });
-      continue;
+  const assignmentMaxRows = isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0
+    ? Math.max(
+      assignmentFields.filter(f => f.alignment === 'left').length,
+      assignmentFields.filter(f => f.alignment === 'right').length
+    )
+    : 0;
+
+  if (assignmentMaxRows > 0) {
+    currentPageY = mTop + (assignmentMaxRows + 1) * lineStep;
+  }
+
+  const startNewPage = () => {
+    if (currentPageLines.length > 0) {
+      pages.push(currentPageLines);
+      pageIdxForFlow = pages.length;
     }
+    currentPageLines = [];
+    currentPageY = mTop + lineStep;
+  };
 
-    if (para === '') {
-      allWrappedLines.push({ type: 'empty' });
-      continue;
+  const ensureLineRoom = () => {
+    if (currentPageLines.length > 0 && currentPageY > h - mBottom) {
+      startNewPage();
     }
+  };
 
-    const paragraphItems = parseParagraphToItems(para, elements);
-    
-    // Measure items and calculate their layout width/height
-    for (const item of paragraphItems) {
+  const getCurrentSegment = () => getLineFlowSegment(
+    pageIdxForFlow,
+    currentPageY,
+    elements,
+    w,
+    h,
+    mLeft,
+    mRight,
+    lineMarginPadding,
+    lineStep,
+    scale
+  );
+
+  const measureItems = (items) => {
+    for (const item of items) {
       if (item.type === 'word') {
         const isItalicActive = isItalic || item.italic;
         const isBoldActive = isBold || item.bold;
@@ -298,89 +353,81 @@ self.onmessage = async function(e) {
         item.height = assetH;
       }
     }
+  };
 
-    // Wrap items of this paragraph into lines
-    let currentLineItems = [];
-    let currentLineWidth = 0;
-    
-    for (const item of paragraphItems) {
-      if (currentLineWidth + item.width <= printableWidth || currentLineItems.length === 0) {
-        currentLineItems.push(item);
-        currentLineWidth += item.width;
-      } else {
-        allWrappedLines.push({
-          type: 'items-line',
-          items: currentLineItems,
-          width: currentLineWidth
-        });
-        currentLineItems = [item];
-        currentLineWidth = item.width;
-      }
-    }
-    if (currentLineItems.length > 0) {
-      allWrappedLines.push({
-        type: 'items-line',
-        items: currentLineItems,
-        width: currentLineWidth
-      });
-    }
-  }
-
-  // Paginate wrapped lines into pages using Y offsets
-  const pages = [];
-  let currentPageLines = [];
-  let currentPageY = mTop + lineStep;
-  if (isAssignmentHeaderEnabled && assignmentFields && assignmentFields.length > 0) {
-    const leftFields = assignmentFields.filter(f => f.alignment === 'left');
-    const rightFields = assignmentFields.filter(f => f.alignment === 'right');
-    const maxRows = Math.max(leftFields.length, rightFields.length);
-    currentPageY = mTop + (maxRows + 1) * lineStep;
-  }
-
-  for (const line of allWrappedLines) {
-    if (line.type === 'page-break') {
-      if (currentPageLines.length > 0) {
-        pages.push(currentPageLines);
-        currentPageLines = [];
-      }
-      currentPageY = mTop + lineStep;
-      continue;
-    }
-
-    if (line.type === 'empty') {
-      currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
-      if (currentPageLines.length > 0 && currentPageY + lineStep > h - mBottom) {
-        pages.push(currentPageLines);
-        currentPageLines = [];
-        currentPageY = mTop + lineStep;
-        currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
-      }
-      line.renderedY = currentPageY;
-      currentPageLines.push(line);
-      currentPageY += lineStep;
-      continue;
-    }
-
-    const lineMaxHeight = Math.max(...line.items.map(it => it.height || fSize), fSize);
+  const pushLine = (items, width, segment) => {
+    if (items.length === 0) return;
+    const lineMaxHeight = Math.max(...items.map(it => it.height || fSize), fSize);
     const lineSteps = Math.max(1, Math.ceil(lineMaxHeight / lineStep));
     const lineReservedHeight = lineSteps * lineStep;
 
-    currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
-
     if (currentPageLines.length > 0 && currentPageY + lineReservedHeight - lineStep > h - mBottom) {
-      pages.push(currentPageLines);
-      currentPageLines = [];
-      currentPageY = mTop + lineStep;
-      currentPageY = checkVerticalOverlapAndAdvanceY(currentPageY, pages.length, elements, h, mTop, lineStep, scale);
+      startNewPage();
+      segment = getCurrentSegment();
     }
 
-    line.lineSteps = lineSteps;
-    line.lineReservedHeight = lineReservedHeight;
-    line.lineMaxHeight = lineMaxHeight;
-    line.renderedY = currentPageY + (lineSteps - 1) * lineStep;
-
-    currentPageLines.push(line);
+    currentPageLines.push({
+      type: 'items-line',
+      items,
+      width,
+      lineSteps,
+      lineReservedHeight,
+      lineMaxHeight,
+      segmentX: segment.x,
+      segmentWidth: segment.width,
+      renderedY: currentPageY + (lineSteps - 1) * lineStep
+    });
     currentPageY += lineReservedHeight;
+  };
+
+  const pushEmptyLine = () => {
+    ensureLineRoom();
+    currentPageLines.push({ type: 'empty', renderedY: currentPageY });
+    currentPageY += lineStep;
+  };
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i];
+    
+    // Check manual page break
+    if (para.trim() === '---page break---') {
+      startNewPage();
+      continue;
+    }
+
+    if (para === '') {
+      pushEmptyLine();
+      continue;
+    }
+
+    const paragraphItems = parseParagraphToItems(para, elements);
+    measureItems(paragraphItems);
+
+    let currentLineItems = [];
+    let currentLineWidth = 0;
+    let currentSegment = getCurrentSegment();
+    
+    for (const item of paragraphItems) {
+      ensureLineRoom();
+      currentSegment = currentLineItems.length === 0 ? getCurrentSegment() : currentSegment;
+
+      if (item.type === 'space' && currentLineItems.length === 0) {
+        continue;
+      }
+
+      if (currentLineWidth + item.width <= currentSegment.width || currentLineItems.length === 0) {
+        currentLineItems.push(item);
+        currentLineWidth += item.width;
+      } else {
+        pushLine(currentLineItems, currentLineWidth, currentSegment);
+        currentLineItems = [item];
+        currentLineWidth = item.width;
+        currentSegment = getCurrentSegment();
+      }
+    }
+    if (currentLineItems.length > 0) {
+      pushLine(currentLineItems, currentLineWidth, currentSegment);
+    }
   }
   
   if (currentPageLines.length > 0) {
@@ -524,12 +571,14 @@ self.onmessage = async function(e) {
       }
 
       const baselineY = line.renderedY;
-      let startX = mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale;
+      const activeSegmentX = line.segmentX || (mLeft + (lineMarginPadding !== undefined ? lineMarginPadding : 15) * scale);
+      const activeSegmentWidth = line.segmentWidth || printableWidth;
+      let startX = activeSegmentX;
 
       if (alignment === 'center') {
-        startX = mLeft + (printableWidth - line.width) / 2;
+        startX = activeSegmentX + (activeSegmentWidth - line.width) / 2;
       } else if (alignment === 'right') {
-        startX = w - mRight - line.width;
+        startX = activeSegmentX + activeSegmentWidth - line.width;
       }
 
       const lineDriftMax = realism.baselineDrift * realism.messiness * scale;
@@ -575,7 +624,7 @@ self.onmessage = async function(e) {
             const hJitter = (rand() - 0.5) * realism.hJitter * realism.messiness * scale;
             const pressure = 1.0 - (rand() * realism.pressureVariation * realism.messiness);
 
-            const progress = (currentX - mLeft) / printableWidth;
+            const progress = (currentX - activeSegmentX) / activeSegmentWidth;
             const cumulativeDrift = progress * lineAngleDrift;
 
             ctx.save();
@@ -610,7 +659,7 @@ self.onmessage = async function(e) {
               const hJitter = (rand() - 0.5) * realism.hJitter * realism.messiness * scale;
               const pressure = 1.0 - (rand() * realism.pressureVariation * realism.messiness);
 
-              const progress = (currentX - mLeft) / printableWidth;
+              const progress = (currentX - activeSegmentX) / activeSegmentWidth;
               const cumulativeDrift = progress * lineAngleDrift;
 
               ctx.save();
@@ -673,8 +722,10 @@ self.onmessage = async function(e) {
         const elY = (el.y / 100) * h;
         const elW = (el.width / 100) * w;
         const elH = (el.height / 100) * h;
-        ctx.fillStyle = paperStyle === 'legal' ? '#fdfbbe' : '#ffffff';
-        ctx.fillRect(elX, elY, elW, elH);
+        if (el.type !== 'image') {
+          ctx.fillStyle = paperStyle === 'legal' ? '#fdfbbe' : '#ffffff';
+          ctx.fillRect(elX, elY, elW, elH);
+        }
         ctx.drawImage(el.bitmap, elX, elY, elW, elH);
         ctx.restore();
       }
@@ -880,16 +931,21 @@ function applySmudgeFilter(ctx, w, h, rand, scale) {
     ctx.fill();
   }
 
-  // Draw very faint graphite noise/smudge across canvas
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const data = imgData.data;
-  for (let i = 0; i < data.length; i += 40) { // check every 10 pixels for speed
-    const noise = (rand() - 0.5) * 5; // tiny noise
-    data[i] = Math.min(255, Math.max(0, data[i] + noise));     // R
-    data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise)); // G
-    data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise)); // B
+  // Draw very faint graphite noise/smudge across canvas.
+  // Skip the per-pixel pass on very large canvases (e.g. extreme DPI exports)
+  // where getImageData would cost a lot of memory/time; the smudge blobs above
+  // still provide the texture.
+  if (w * h <= 16000000) {
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 40) { // check every 10 pixels for speed
+      const noise = (rand() - 0.5) * 5; // tiny noise
+      data[i] = Math.min(255, Math.max(0, data[i] + noise));     // R
+      data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise)); // G
+      data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise)); // B
+    }
+    ctx.putImageData(imgData, 0, 0);
   }
-  ctx.putImageData(imgData, 0, 0);
 
   ctx.restore();
 }
