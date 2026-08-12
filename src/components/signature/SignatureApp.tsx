@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Type, Edit3, Trash2, RefreshCw } from 'lucide-react';
+import { Download, Trash2, RefreshCw } from 'lucide-react';
 import { FONTS } from '../../lib/fonts';
 import { downloadBlob } from '../../lib/exporter';
+import { escapeXml } from '../../lib/xml';
 
 export default function SignatureApp() {
   const [activeTab, setActiveTab] = useState<'text' | 'draw'>('text');
@@ -200,7 +201,7 @@ export default function SignatureApp() {
             }
           </style>
         </defs>
-        <text x="50%" y="50%" class="sig-text" transform="rotate(${slant}, ${width/2}, ${height/2})">${typedName}</text>
+        <text x="50%" y="50%" class="sig-text" transform="rotate(${slant}, ${width/2}, ${height/2})">${escapeXml(typedName)}</text>
       </svg>`;
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
       downloadBlob(blob, 'signature.svg');
