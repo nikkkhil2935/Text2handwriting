@@ -1,6 +1,3 @@
-import { PDFDocument } from 'pdf-lib';
-import JSZip from 'jszip';
-
 // Standard paper dimensions in PDF points (72 points = 1 inch)
 export const PAPER_SIZES = {
   a4: { width: 595.27, height: 841.89, label: 'A4 (210 x 297 mm)' },
@@ -12,6 +9,7 @@ export async function createPdfFromImages(
   pagesBuffers: ArrayBuffer[],
   paperSize: 'a4' | 'letter' | 'legal'
 ): Promise<Uint8Array> {
+  const { PDFDocument } = await import('pdf-lib');
   const pdfDoc = await PDFDocument.create();
   const dimensions = PAPER_SIZES[paperSize] || PAPER_SIZES.a4;
 
@@ -37,6 +35,7 @@ export async function createZipFromImages(
   pagesBuffers: ArrayBuffer[],
   filenamePrefix: string
 ): Promise<Blob> {
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   const padDigits = Math.max(2, String(pagesBuffers.length).length);
 

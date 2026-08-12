@@ -1,48 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Undo2, Redo2, Download, RefreshCw, Save, FolderOpen,
-  Settings, Type, FileText, Sparkles, Sliders, Keyboard,
-  Info, Check, Moon, Sun, PanelLeftClose, PanelLeftOpen, Upload, Trash2,
-  Image, Table2, Sigma, Pencil, Loader2
+  Download, RefreshCw, Save, Settings, FileText, Sparkles,
+  Info, Check, Upload, Trash2, Image, Table2, Sigma, Pencil, Loader2
 } from 'lucide-react';
 import katex from 'katex';
-import * as htmlToImage from 'html-to-image';
-import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset } from '../../lib/fonts';
+import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset, resolveFontFamily } from '../../lib/fonts';
 import { createPdfFromImages, createZipFromImages, downloadBlob } from '../../lib/exporter';
 
-// Cache for KaTeX CSS with absolute font URLs to ensure correct rendering in html-to-image
-let cachedKatexCss = '';
-const getKatexCss = async () => {
-  if (cachedKatexCss) return cachedKatexCss;
-  try {
-    const response = await fetch('https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css');
-    let cssText = await response.text();
-    cssText = cssText.replace(/url\(fonts\//g, 'url(https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/fonts/');
-    cachedKatexCss = cssText;
-    return cssText;
-  } catch (err) {
-    console.error('Failed to fetch KaTeX CSS', err);
-    return '';
-  }
-};
+// Self-hosted PDF.js loader — bundled with the app instead of a CDN script.
+// The module promise is cached so concurrent imports share a single load.
+let pdfJsPromise: Promise<any> | null = null;
 
-// Dynamic client-side PDF.js loader
 const loadPdfJs = (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if ((window as any).pdfjsLib) {
-      resolve((window as any).pdfjsLib);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      const pdfjsLib = (window as any).pdfjsLib;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      resolve(pdfjsLib);
-    };
-    script.onerror = () => reject(new Error('Failed to load PDF.js'));
-    document.head.appendChild(script);
-  });
+  if (!pdfJsPromise) {
+    pdfJsPromise = (async () => {
+      const pdfjsLib = await import('pdfjs-dist');
+      // pdf.js v6 always creates the worker with { type: 'module' }, so the
+      // worker file must be served with a JS MIME type on every host. Inlining
+      // it as a Blob URL sidesteps host-specific MIME maps (e.g. some static
+      // hosts serve .mjs as text/plain).
+      const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs?raw');
+      const workerBlobUrl = URL.createObjectURL(
+        new Blob([workerModule.default], { type: 'text/javascript' })
+      );
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerBlobUrl;
+      return pdfjsLib;
+    })();
+  }
+  return pdfJsPromise;
 };
 
 // Client-side text extraction preserving lines and page breaks
@@ -202,11 +187,11 @@ interface CanvasElement {
   width: number; // percentage-based width
   height: number; // percentage-based height
   dataUrl?: string; // image source URL
-  latexSrc?: string; // raw LaTeX string (for formula elements – rendered inline, no html-to-image)
+  latexSrc?: string; // legacy positioned formula source
   strokes?: Array<{ x: number; y: number; type: 'start' | 'move' }>; // vector sketch paths
 }
 
-// Inline KaTeX renderer – avoids html-to-image CORS/font issues by rendering directly in the DOM
+// Legacy positioned formula preview. New formulas are inserted into the line-flow text.
 const FormulaDisplay: React.FC<{ latexSrc: string; inkColor: string }> = ({ latexSrc, inkColor }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -224,6 +209,57 @@ const FormulaDisplay: React.FC<{ latexSrc: string; inkColor: string }> = ({ late
       style={{ color: inkColor, fontSize: '14px', padding: '4px' }}
     />
   );
+};
+
+const latexToInlineText = (latex: string) => {
+  let output = latex.trim();
+
+  const braced = (command: string, replacer: (value: string) => string) => {
+    const pattern = new RegExp(`\\\\${command}\\{([^{}]+)\\}`, 'g');
+    let previous = '';
+    while (previous !== output) {
+      previous = output;
+      output = output.replace(pattern, (_match, value) => replacer(value));
+    }
+  };
+
+  let previous = '';
+  while (previous !== output) {
+    previous = output;
+    output = output.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
+  }
+
+  braced('sqrt', value => `sqrt(${value})`);
+  output = output
+    .replace(/\\left|\\right/g, '')
+    .replace(/\^\{([^{}]+)\}/g, '^$1')
+    .replace(/_\{([^{}]+)\}/g, '_$1')
+    .replace(/\\pm/g, '+/-')
+    .replace(/\\times/g, 'x')
+    .replace(/\\cdot/g, '*')
+    .replace(/\\div/g, '/')
+    .replace(/\\leq?/g, '<=')
+    .replace(/\\geq?/g, '>=')
+    .replace(/\\neq/g, '!=')
+    .replace(/\\approx/g, '~=')
+    .replace(/\\infty/g, 'infinity')
+    .replace(/\\int/g, 'integral')
+    .replace(/\\sum/g, 'sum')
+    .replace(/\\prod/g, 'product')
+    .replace(/\\pi/g, 'pi')
+    .replace(/\\theta/g, 'theta')
+    .replace(/\\alpha/g, 'alpha')
+    .replace(/\\beta/g, 'beta')
+    .replace(/\\gamma/g, 'gamma')
+    .replace(/\\delta/g, 'delta')
+    .replace(/\\mu/g, 'mu')
+    .replace(/\\sigma/g, 'sigma')
+    .replace(/\\([a-zA-Z]+)/g, '$1')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return output || latex.trim();
 };
 
 
@@ -302,61 +338,7 @@ const drawTableToDataUrl = (
   });
 };
 
-const drawFormulaToDataUrl = async (
-  latex: string,
-  inkColor: string
-): Promise<string> => {
-  const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.left = '0px';
-  container.style.top = '0px';
-  container.style.opacity = '0';
-  container.style.pointerEvents = 'none';
-  container.style.zIndex = '-100';
-  container.style.padding = '15px';
-  container.style.background = 'transparent';
-  container.style.color = inkColor;
-  container.style.fontSize = '24px';
-  container.style.display = 'inline-block';
-  document.body.appendChild(container);
-
-  try {
-    const mathContainer = document.createElement('div');
-    katex.render(latex, mathContainer, {
-      throwOnError: false,
-      displayMode: true
-    });
-    container.appendChild(mathContainer);
-
-    const css = await getKatexCss();
-    if (css) {
-      const styleEl = document.createElement('style');
-      styleEl.textContent = css;
-      container.appendChild(styleEl);
-    }
-
-    await document.fonts.ready;
-    // Wait for browser painting & font rendering
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    const dataUrl = await htmlToImage.toPng(container, {
-      backgroundColor: 'transparent',
-      style: {
-        transform: 'scale(1)',
-        color: inkColor
-      }
-    });
-
-    document.body.removeChild(container);
-    return dataUrl;
-  } catch (err) {
-    console.error('KaTeX rendering error', err);
-    if (container.parentNode) document.body.removeChild(container);
-    return '';
-  }
-};
-
-const prepareElementsForWorker = async (elements: CanvasElement[], inkColor = '#0000ff'): Promise<any[]> => {
+const prepareElementsForWorker = async (elements: CanvasElement[]): Promise<any[]> => {
   return Promise.all(
     elements.map(async (el) => {
       if (el.type === 'sketch') {
@@ -372,16 +354,7 @@ const prepareElementsForWorker = async (elements: CanvasElement[], inkColor = '#
         };
       }
 
-      // For formula elements with latexSrc but no pre-generated dataUrl,
-      // rasterize them just before sending to the worker (for export quality)
       let dataUrl = el.dataUrl;
-      if (el.type === 'formula' && el.latexSrc && !dataUrl) {
-        try {
-          dataUrl = await drawFormulaToDataUrl(el.latexSrc, inkColor);
-        } catch (err) {
-          console.error('Failed to rasterize formula for worker', err);
-        }
-      }
 
       if (!dataUrl) {
         return {
@@ -428,6 +401,19 @@ const prepareElementsForWorker = async (elements: CanvasElement[], inkColor = '#
     })
   );
 };
+
+// Font preview page links here with ?font=<family>. Resolve it to a known
+// family (case-insensitive) so invalid values silently fall back to defaults.
+function getFontFromUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const param = new URLSearchParams(window.location.search).get('font');
+    if (!param) return undefined;
+    return resolveFontFamily(param);
+  } catch {
+    return undefined;
+  }
+}
 
 export default function ConverterApp({
   defaultFont,
@@ -644,6 +630,9 @@ export default function ConverterApp({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pagesRef = useRef<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Tracks which font buffers were already posted to the persistent worker so
+  // re-renders don't re-send (and re-clone) them on every keystroke.
+  const sentFontKeysRef = useRef<Set<string>>(new Set());
 
   const insertTextAtCursor = (insertedText: string) => {
     const el = textareaRef.current;
@@ -711,6 +700,17 @@ export default function ConverterApp({
     }
   }, []);
 
+  // Apply the font picked on the font preview page (?font=<family>). Applied in
+  // an effect (not a useState initializer) to avoid SSR/hydration mismatches.
+  useEffect(() => {
+    const urlFont = getFontFromUrl();
+    if (urlFont && urlFont !== fontFamily) {
+      setFontFamily(urlFont);
+      showToast(`Font loaded: ${urlFont}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Initialize Web Worker
   useEffect(() => {
     workerRef.current = new Worker('/workers/render.worker.js');
@@ -768,14 +768,20 @@ export default function ConverterApp({
       }
 
       // Prepare overlay elements for worker
-      const workerElements = await prepareElementsForWorker(canvasElements, inkColor);
+      const workerElements = await prepareElementsForWorker(canvasElements);
 
-      const customFontsPayload = [
-        ...customFonts.map(cf => ({ name: cf.name, buffer: cf.buffer }))
-      ];
-      if (fontBuffer) {
-        customFontsPayload.push({ name: fontFamily, buffer: fontBuffer });
+      const sentKeys = sentFontKeysRef.current;
+      const unsentCustom = customFonts.filter(cf => !sentKeys.has(cf.name));
+      unsentCustom.forEach(cf => sentKeys.add(cf.name));
+      let includeCurrentBuffer = false;
+      if (fontBuffer && !sentKeys.has(fontFamily)) {
+        includeCurrentBuffer = true;
+        sentKeys.add(fontFamily);
       }
+      const customFontsPayload = [
+        ...unsentCustom.map(cf => ({ name: cf.name, buffer: cf.buffer })),
+        ...(includeCurrentBuffer ? [{ name: fontFamily, buffer: fontBuffer }] : [])
+      ];
 
       const payload = {
         text,
@@ -1010,7 +1016,7 @@ export default function ConverterApp({
       }
 
       // Prepare overlay elements for worker
-      const workerElements = await prepareElementsForWorker(canvasElements, inkColor);
+      const workerElements = await prepareElementsForWorker(canvasElements);
 
       exportWorker.onmessage = (e) => {
         const { type, pages: buffers, message } = e.data;
@@ -1229,6 +1235,10 @@ export default function ConverterApp({
 
   const handleSketchEnd = () => {
     if (currentSketchStrokes.length === 0) return;
+    if (currentSketchStrokes.length < 2) {
+      setCurrentSketchStrokes([]);
+      return;
+    }
 
     const newElement: CanvasElement = {
       id: String(Date.now()),
@@ -1392,6 +1402,62 @@ export default function ConverterApp({
     return { backgroundColor: '#ffffff' };
   };
 
+  const getSketchPath = (strokes?: CanvasElement['strokes']) => {
+    return (strokes || []).reduce((acc, pt) => {
+      return `${acc} ${pt.type === 'start' ? 'M' : 'L'} ${pt.x} ${pt.y}`;
+    }, '');
+  };
+
+  const renderSketchLayer = (showSavedSketches: boolean) => (
+    <div
+      className="absolute inset-0 bg-transparent cursor-crosshair pointer-events-auto touch-none z-30"
+      onMouseDown={handleSketchStart}
+      onMouseMove={handleSketchMove}
+      onMouseUp={handleSketchEnd}
+      onMouseLeave={handleSketchEnd}
+      onTouchStart={handleSketchTouchStart}
+      onTouchMove={handleSketchTouchMove}
+      onTouchEnd={handleSketchTouchEnd}
+      onTouchCancel={handleSketchTouchEnd}
+    >
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="w-full h-full pointer-events-none"
+        style={{ position: 'absolute', inset: 0 }}
+      >
+        {showSavedSketches && canvasElements
+          .filter(el => el.pageIndex === previewPageIdx && el.type === 'sketch')
+          .map(el => (
+            <path
+              key={el.id}
+              d={getSketchPath(el.strokes)}
+              fill="none"
+              stroke={inkColor}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.9"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))
+        }
+        {currentSketchStrokes.length > 0 && (
+          <path
+            d={getSketchPath(currentSketchStrokes)}
+            fill="none"
+            stroke={inkColor}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.9"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+      </svg>
+    </div>
+  );
+
   const renderElementsOverlay = (isInteractive: boolean) => {
     return canvasElements
       .filter(el => el.pageIndex === previewPageIdx && el.type !== 'sketch')
@@ -1412,7 +1478,7 @@ export default function ConverterApp({
             border: selectedElementId === el.id
               ? '1.5px dashed #0070f3'
               : isInteractive ? '1.5px dashed #cbd5e1' : 'none',
-            backgroundColor: paperStyle === 'legal' ? '#fdfbbe' : '#ffffff',
+            backgroundColor: el.type === 'image' ? 'transparent' : (paperStyle === 'legal' ? '#fdfbbe' : '#ffffff'),
             pointerEvents: isInteractive ? 'auto' : 'none',
             zIndex: 10
           }}
@@ -1460,7 +1526,7 @@ export default function ConverterApp({
                 className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                 title="Delete Element"
               >
-                ×
+                X
               </button>
             </>
           )}
@@ -1539,11 +1605,11 @@ export default function ConverterApp({
                 U
               </button>
               <button
-                onClick={() => insertTextAtCursor('\n• ')}
+                onClick={() => insertTextAtCursor('\n- ')}
                 className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
                 title="Bullet List"
               >
-                • List
+                List
               </button>
               <button
                 onClick={() => insertTextAtCursor('\n1. ')}
@@ -1557,7 +1623,7 @@ export default function ConverterApp({
                 className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Outdent"
               >
-                ←
+                Out
               </button>
               <button
                 onClick={() => {
@@ -1567,14 +1633,14 @@ export default function ConverterApp({
                 className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Alignment"
               >
-                ↕
+                Align
               </button>
               <button
                 onClick={() => setLineMarginPadding(prev => Math.min(150, prev + 10))}
                 className="px-2 md:px-3 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
                 title="Indent"
               >
-                →
+                In
               </button>
             </div>
           </div>
@@ -1634,7 +1700,6 @@ export default function ConverterApp({
               <button
                 onClick={() => {
                   setIsDrawingMode(!isDrawingMode);
-                  if (!isDrawingMode) setEditMode('preview');
                 }}
                 className={`px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
                 title="Enable Sketch Drawing"
@@ -2036,7 +2101,9 @@ export default function ConverterApp({
                     fontSize: `${fontSize * scale}px`,
                     lineHeight: paperStyle === 'plain'
                       ? `${fontSize * lineHeight * scale}px`
-                      : `${gridSize * scale}px`,
+                      // Ruled paper: match the worker's line reservation so text
+                      // taller than one grid step never overlaps the next line
+                      : `${Math.max(1, Math.ceil(fontSize / gridSize)) * gridSize * scale}px`,
                     color: inkColor,
                     fontFamily: `"${fontFamily}", "Architects Daughter", sans-serif`,
                     textAlign: alignment as any,
@@ -2054,9 +2121,10 @@ export default function ConverterApp({
                   }}
                   className="select-text focus:outline-none placeholder:text-gray-300 transition-colors"
                 />
-                <div className="absolute inset-0 pointer-events-auto z-20 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
                   {renderElementsOverlay(true)}
                 </div>
+                {isDrawingMode && renderSketchLayer(true)}
               </div>
             ) : (
               /* Realistic handwriting preview from worker */
@@ -2083,7 +2151,7 @@ export default function ConverterApp({
                     {/* Elements Overlay Layer (draggable/resizable on top of the preview) */}
                     <div className="absolute inset-0 top-0 left-0 w-full h-full pointer-events-auto">
                       {canvasElements
-                        .filter(el => el.pageIndex === previewPageIdx)
+                        .filter(el => el.pageIndex === previewPageIdx && el.type !== 'sketch')
                         .map(el => (
                           <div
                             key={el.id}
@@ -2098,7 +2166,7 @@ export default function ConverterApp({
                               width: `${el.width}%`,
                               height: `${el.height}%`,
                               border: selectedElementId === el.id ? '1.5px dashed #0070f3' : '1px dashed transparent',
-                              backgroundColor: paperStyle === 'legal' ? '#fdfbbe' : '#ffffff'
+                              backgroundColor: el.type === 'image' ? 'transparent' : (paperStyle === 'legal' ? '#fdfbbe' : '#ffffff')
                             }}
                             className="group hover:border-hairline-strong pointer-events-auto"
                           >
@@ -2143,77 +2211,13 @@ export default function ConverterApp({
                               className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                               title="Delete Element"
                             >
-                              ×
+                              X
                             </button>
                           </div>
                         ))
                       }
 
-                      {/* Drawing Canvas Overlays */}
-                      {isDrawingMode && (
-                        <div
-                          className="absolute inset-0 bg-transparent cursor-crosshair pointer-events-auto touch-none"
-                          onMouseDown={handleSketchStart}
-                          onMouseMove={handleSketchMove}
-                          onMouseUp={handleSketchEnd}
-                          onTouchStart={handleSketchTouchStart}
-                          onTouchMove={handleSketchTouchMove}
-                          onTouchEnd={handleSketchTouchEnd}
-                        >
-                          {/* SVG uses viewBox="0 0 100 100" so stroke x/y (0-100) map correctly */}
-                          <svg
-                            viewBox="0 0 100 100"
-                            preserveAspectRatio="none"
-                            className="w-full h-full pointer-events-none"
-                            style={{ position: 'absolute', inset: 0 }}
-                          >
-                            {canvasElements
-                              .filter(el => el.pageIndex === previewPageIdx && el.type === 'sketch')
-                              .map(el => {
-                                let pathData = '';
-                                el.strokes?.forEach((pt) => {
-                                  if (pt.type === 'start') {
-                                    pathData += ` M ${pt.x} ${pt.y}`;
-                                  } else {
-                                    pathData += ` L ${pt.x} ${pt.y}`;
-                                  }
-                                });
-                                return (
-                                  <path
-                                    key={el.id}
-                                    d={pathData}
-                                    fill="none"
-                                    stroke={inkColor}
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    opacity="0.9"
-                                    vectorEffect="non-scaling-stroke"
-                                  />
-                                );
-                              })
-                            }
-                            {currentSketchStrokes.length > 0 && (
-                                              <path
-                                d={currentSketchStrokes.reduce((acc, pt) => {
-                                  if (pt.type === 'start') {
-                                    return `${acc} M ${pt.x} ${pt.y}`;
-                                  } else {
-                                    return `${acc} L ${pt.x} ${pt.y}`;
-                                  }
-                                }, '')}
-                                fill="none"
-                                stroke={inkColor}
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                opacity="0.9"
-                                vectorEffect="non-scaling-stroke"
-                              />
-                            )}
-                          </svg>
-                        </div>
-                      )}
+                      {isDrawingMode && renderSketchLayer(false)}
                     </div>
                   </div>
                 ) : (
@@ -2427,7 +2431,7 @@ export default function ConverterApp({
                               }}
                               className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer"
                             >
-                              ×
+                              X
                             </button>
                           </div>
                         ))}
@@ -2596,7 +2600,7 @@ export default function ConverterApp({
                                   className="text-red-500 hover:text-red-600 font-bold px-1.5 text-xs cursor-pointer"
                                   title="Delete Field"
                                 >
-                                  ×
+                                  X
                                 </button>
                               </div>
                             </div>
@@ -2824,7 +2828,7 @@ export default function ConverterApp({
                             onClick={() => deletePreset(name)}
                             className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer"
                           >
-                            ×
+                            X
                           </button>
                         )}
                       </div>
@@ -2914,13 +2918,14 @@ export default function ConverterApp({
           <div className="bg-canvas border border-hairline-strong rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-hairline pb-2">
               <h3 className="font-mono font-bold text-primary text-xs uppercase flex items-center gap-1.5">
-                <span>Σ LaTeX Math Formula</span>
+                <Sigma size={14} />
+                <span>LaTeX Math Formula</span>
               </h3>
               <button
                 onClick={() => setIsFormulaModalOpen(false)}
                 className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
               >
-                ✕
+                X
               </button>
             </div>
             
@@ -2958,19 +2963,9 @@ export default function ConverterApp({
                     showToast('Please enter a LaTeX expression', true);
                     return;
                   }
-                  const newElement: CanvasElement = {
-                    id: String(Date.now()),
-                    type: 'formula',
-                    pageIndex: previewPageIdx,
-                    x: 15,
-                    y: 30,
-                    width: 55,
-                    height: 18,
-                    latexSrc: latexInput
-                  };
-                  setCanvasElements(prev => [...prev, newElement]);
+                  insertTextAtCursor(` ${latexToInlineText(latexInput)} `);
                   setIsFormulaModalOpen(false);
-                  showToast('LaTeX Formula Inserted!');
+                  showToast('Formula inserted as editable text.');
                 }}
                 className="btn-primary py-1 text-xs px-3 h-8 cursor-pointer font-bold font-mono"
               >
@@ -2987,13 +2982,14 @@ export default function ConverterApp({
           <div className="bg-canvas border border-hairline-strong rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-hairline pb-2">
               <h3 className="font-mono font-bold text-primary text-xs uppercase flex items-center gap-1.5">
-                <span>田 Hand-Drawn Grid Table</span>
+                <Table2 size={14} />
+                <span>Hand-Drawn Grid Table</span>
               </h3>
               <button
                 onClick={() => setIsTableModalOpen(false)}
                 className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
               >
-                ✕
+                X
               </button>
             </div>
 

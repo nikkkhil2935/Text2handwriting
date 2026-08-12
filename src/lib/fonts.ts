@@ -82,6 +82,17 @@ export function getFontByFamily(family: string): FontItem | undefined {
   return FONTS.find(f => f.family === family);
 }
 
+/**
+ * Resolve a font query (e.g. the ?font= URL param) to its canonical family
+ * name, case-insensitively and tolerant of surrounding whitespace. Returns
+ * undefined for unknown names so callers can silently fall back to defaults.
+ */
+export function resolveFontFamily(query: string): string | undefined {
+  const q = query.trim().toLowerCase();
+  const match = FONTS.find(f => f.family.toLowerCase() === q);
+  return match ? match.family : undefined;
+}
+
 export function getDefaultBaselineOffset(family: string): number {
   const offsets: Record<string, number> = {
     'Architects Daughter': 2,

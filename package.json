@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "test": "vitest run",
     "astro": "astro",
     "deploy": "astro build && node scripts/verify-build.js && wrangler pages deploy dist --branch main"
   },
@@ -18,11 +19,11 @@
     "@tailwindcss/vite": "^4.3.0",
     "@types/katex": "^0.16.8",
     "astro": "^6.4.6",
-    "html-to-image": "^1.11.13",
     "jszip": "^3.10.1",
     "katex": "^0.17.0",
     "lucide-react": "^1.17.0",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.0"
@@ -31,6 +32,7 @@
     "@astrojs/cloudflare": "^13.7.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "vitest": "^4.1.10",
     "wrangler": "^4.99.0"
   }
 }
