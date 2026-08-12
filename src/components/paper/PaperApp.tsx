@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Grid, Settings, Layers, RefreshCw } from 'lucide-react';
-import JSZip from 'jszip';
+import { Download, Settings, Layers, RefreshCw, FileText } from 'lucide-react';
 import { downloadBlob } from '../../lib/exporter';
+import { computePdfLayout, dotPdfPositions, hexToRgb, horizontalRulePdfYs, verticalRuleXs } from '../../lib/paper-pdf';
 
 export default function PaperApp() {
   const [paperStyle, setPaperStyle] = useState('single-ruled');
@@ -15,6 +15,7 @@ export default function PaperApp() {
   const [marginRight, setMarginRight] = useState(60);
   const [marginBottom, setMarginBottom] = useState(60);
   const [pageCount, setPageCount] = useState(5);
+  const [exportPaperSize, setExportPaperSize] = useState<'a4' | 'letter' | 'legal'>('a4');
 
   const [previewUrl, setPreviewUrl] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -166,6 +167,7 @@ export default function PaperApp() {
       const scale = 2;
       const width = 800;
       const height = 1130;
+      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
 
       for (let i = 0; i < pageCount; i++) {
@@ -181,6 +183,97 @@ export default function PaperApp() {
       downloadBlob(zipBlob, 'paper-pages.zip');
     } catch (e) {
       console.error('Export failed', e);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Vector PDF export — draws the exact same geometry as the canvas preview,
+  // but at the physical page size (A4/Letter/Legal) so rules print true-to-scale.
+  const generatePdf = async () => {
+    setGenerating(true);
+    try {
+      const { PDFDocument, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.create();
+      // Map the 800px-wide canvas coordinate space onto the physical page size
+      const layout = computePdfLayout(
+        exportPaperSize,
+        { left: marginLeft, right: marginRight, top: marginTop, bottom: marginBottom },
+        gridSize
+      );
+      const { width: w, height: h, scale: s } = layout;
+      const { marginLeft: mLeft, marginRight: mRight, marginTop: mTop, marginBottom: mBottom } = layout;
+
+      const lineColorRgb = rgb(...hexToRgb(lineColor));
+      const marginColorRgb = rgb(...hexToRgb(marginColor));
+      // Legal pad keeps its hardcoded cream background (matches canvas preview)
+      const baseColorRgb = paperStyle === 'legal' ? rgb(...hexToRgb('#fff8dc')) : rgb(...hexToRgb(paperColor));
+
+      // NOTE: canvas y grows downward; PDF y grows upward — helpers flip for us
+      const horizontalRules = horizontalRulePdfYs(layout);
+      const verticalRules = verticalRuleXs(layout);
+
+      for (let i = 0; i < pageCount; i++) {
+        const page = pdfDoc.addPage([w, h]);
+        const drawLine = (x1: number, y1: number, x2: number, y2: number, color: ReturnType<typeof rgb>, thickness: number) => {
+          page.drawLine({
+            start: { x: x1, y: y1 },
+            end: { x: x2, y: y2 },
+            thickness,
+            color
+          });
+        };
+        page.drawRectangle({ x: 0, y: 0, width: w, height: h, color: baseColorRgb });
+
+        if (paperStyle === 'single-ruled' || paperStyle === 'a4-notebook') {
+          for (const y of horizontalRules) {
+            drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
+          }
+        }
+
+        if (paperStyle === 'double-ruled') {
+          for (const y of horizontalRules) {
+            drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
+            drawLine(mLeft, y - 3 * s, w - mRight, y - 3 * s, lineColorRgb, 1 * s);
+          }
+        }
+
+        if (paperStyle === 'a4-notebook') {
+          drawLine(mLeft, 0, mLeft, h, marginColorRgb, 2 * s);
+        }
+
+        if (paperStyle === 'graph') {
+          for (const x of verticalRules) {
+            drawLine(x, mTop, x, h - mBottom, lineColorRgb, 1 * s);
+          }
+          for (const y of horizontalRules) {
+            drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
+          }
+        }
+
+        if (paperStyle === 'dot-grid') {
+          for (const dot of dotPdfPositions(layout)) {
+            page.drawCircle({ x: dot.x, y: dot.y, size: 1.5 * s, color: lineColorRgb });
+          }
+        }
+
+        if (paperStyle === 'legal') {
+          for (const y of horizontalRules) {
+            drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
+          }
+          drawLine(mLeft, 0, mLeft, h, marginColorRgb, 2 * s);
+        }
+
+        if (hasVerticalMargin && paperStyle !== 'a4-notebook' && paperStyle !== 'legal') {
+          drawLine(mLeft, 0, mLeft, h, marginColorRgb, 2 * s);
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      downloadBlob(blob, 'notebook-paper.pdf');
+    } catch (e) {
+      console.error('PDF export failed', e);
     } finally {
       setGenerating(false);
     }
@@ -277,18 +370,40 @@ export default function PaperApp() {
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold uppercase text-body flex items-center"><Layers size={12} className="mr-1" /> Multi-Page Export</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="block font-semibold uppercase text-body mb-1">Pages</label>
                   <input type="number" min="1" max="100" value={pageCount} onChange={(e) => setPageCount(Math.max(1, parseInt(e.target.value) || 1))} className="input-field w-full h-8 bg-canvas" />
                 </div>
+                <div>
+                  <label className="block font-semibold uppercase text-body mb-1">Paper Size</label>
+                  <select
+                    value={exportPaperSize}
+                    onChange={(e) => setExportPaperSize(e.target.value as 'a4' | 'letter' | 'legal')}
+                    className="input-field w-full h-8 bg-canvas cursor-pointer"
+                  >
+                    <option value="a4">A4 (210 × 297 mm)</option>
+                    <option value="letter">US Letter (8.5 × 11 in)</option>
+                    <option value="legal">Legal (8.5 × 14 in)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <button
+                  onClick={generatePdf}
+                  disabled={generating}
+                  className="btn-primary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  <FileText size={14} />
+                  {generating ? 'Generating...' : 'Export PDF'}
+                </button>
                 <button
                   onClick={generateMultiPage}
                   disabled={generating}
-                  className="btn-primary h-8 px-4 mt-5 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="btn-secondary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <Download size={14} />
-                  {generating ? 'Generating...' : 'Export ZIP'}
+                  Export ZIP
                 </button>
               </div>
             </div>
