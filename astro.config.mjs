@@ -41,16 +41,14 @@ export default defineConfig({
   output: 'static',
   vite: {
     plugins: [tailwindcss(), handleStaleOptimizeDeps()],
+    resolve: {
+      dedupe: ['react', 'react-dom']
+    },
     optimizeDeps: {
       include: [
         'pdf-lib',
         'jszip',
-        'katex',
-        'react',
-        'react-dom',
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        'react-dom/client'
+        'katex'
       ],
       exclude: ['lucide-react']
     }
