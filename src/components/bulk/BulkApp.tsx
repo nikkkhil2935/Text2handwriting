@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText, Plus, Upload, Trash2, Settings, Download,
-  RefreshCw, Check, Info, FileSpreadsheet, Eye
+  RefreshCw, Check, Info, FileSpreadsheet, Eye, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { FONTS, getDefaultBaselineOffset } from '../../lib/fonts';
 import { createPdfFromImages, downloadBlob } from '../../lib/exporter';
@@ -628,14 +628,14 @@ export default function BulkApp() {
       {isBulkPasteOpen && (
         <div className="border border-hairline bg-canvas rounded-lg p-5 shadow-md flex flex-col gap-3">
           <h3 className="text-xs font-mono font-semibold uppercase text-primary">Bulk Paste Delimiter Splitter</h3>
-          <div className="flex items-center space-x-4">
-            <div className="w-1/3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="w-full sm:w-1/3">
               <label className="block text-[10px] text-mute font-mono">Block Delimiter</label>
               <input
                 type="text"
                 value={delimiter}
                 onChange={(e) => setDelimiter(e.target.value)}
-                className="input-field h-8 text-xs font-mono bg-canvas-soft"
+                className="input-field h-8 text-xs font-mono bg-canvas-soft w-full"
               />
             </div>
             <p className="text-[10px] text-mute leading-normal">
@@ -689,8 +689,8 @@ export default function BulkApp() {
                   }`}
               >
                 {/* Header row */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center space-x-2 flex-grow">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 flex-grow min-w-0">
                     <span className="text-xs font-mono text-mute">{String(idx + 1).padStart(2, '0')}.</span>
                     <input
                       type="text"
@@ -1009,9 +1009,10 @@ export default function BulkApp() {
               </h4>
               <button
                 onClick={() => { setActiveDocPreview(null); setActiveDocPreviewUrls([]); }}
-                className="text-mute hover:text-primary font-bold text-sm"
+                className="text-mute hover:text-primary p-1 rounded-full hover:bg-canvas-soft transition-colors cursor-pointer"
+                title="Close"
               >
-                Close
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1030,9 +1031,10 @@ export default function BulkApp() {
                 <button
                   disabled={previewPageIdx === 0}
                   onClick={() => setPreviewPageIdx(p => Math.max(0, p - 1))}
-                  className="px-2 py-1 border border-hairline bg-canvas hover:bg-canvas-soft rounded disabled:opacity-40 font-semibold"
+                  className="px-2.5 py-1 border border-hairline bg-canvas hover:bg-canvas-soft rounded disabled:opacity-40 font-semibold inline-flex items-center gap-1 cursor-pointer"
                 >
-                  PREV
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
                 </button>
                 <span>
                   Page {previewPageIdx + 1} of {activeDocPreviewUrls.length}
@@ -1040,9 +1042,10 @@ export default function BulkApp() {
                 <button
                   disabled={previewPageIdx >= activeDocPreviewUrls.length - 1}
                   onClick={() => setPreviewPageIdx(p => Math.min(activeDocPreviewUrls.length - 1, p + 1))}
-                  className="px-2 py-1 border border-hairline bg-canvas hover:bg-canvas-soft rounded disabled:opacity-40 font-semibold"
+                  className="px-2.5 py-1 border border-hairline bg-canvas hover:bg-canvas-soft rounded disabled:opacity-40 font-semibold inline-flex items-center gap-1 cursor-pointer"
                 >
-                  NEXT
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}

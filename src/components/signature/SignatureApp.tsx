@@ -374,7 +374,7 @@ export default function SignatureApp() {
         
         {/* Left Column: Canvas Preview */}
         <div className="w-full md:w-1/2 flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4 border-b border-hairline pb-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4 border-b border-hairline pb-2.5">
             <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               Signature Canvas

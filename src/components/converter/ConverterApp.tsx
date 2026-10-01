@@ -3,7 +3,7 @@ import {
   Download, RefreshCw, Save, Settings, FileText, Sparkles,
   Info, Check, Upload, Trash2, Image, Table2, Sigma, Pencil, Loader2,
   Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
-  Indent, Outdent, Maximize2, Minimize2, Copy, Shuffle, FileUp
+  Indent, Outdent, Maximize2, Minimize2, Copy, Shuffle, FileUp, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import katex from 'katex';
 import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset, resolveFontFamily } from '../../lib/fonts';
@@ -1595,7 +1595,7 @@ export default function ConverterApp({
                 className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                 title="Delete Element"
               >
-                X
+                <X size={12} />
               </button>
             </>
           )}
@@ -2373,7 +2373,7 @@ export default function ConverterApp({
                               className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer font-bold"
                               title="Delete Element"
                             >
-                              X
+                              <X size={12} />
                             </button>
                           </div>
                         ))
@@ -2415,10 +2415,11 @@ export default function ConverterApp({
                 <button
                   disabled={previewPageIdx === 0}
                   onClick={() => setPreviewPageIdx(p => Math.max(0, p - 1))}
-                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary"
+                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary inline-flex items-center gap-1"
                   title="Previous Page"
                 >
-                  ◀ Prev
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
                 </button>
                 <span className="text-body font-medium select-none">
                   Page {previewPageIdx + 1} of {pages.length}
@@ -2426,10 +2427,11 @@ export default function ConverterApp({
                 <button
                   disabled={previewPageIdx >= pages.length - 1}
                   onClick={() => setPreviewPageIdx(p => Math.min(pages.length - 1, p + 1))}
-                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary"
+                  className="font-semibold disabled:opacity-30 cursor-pointer text-primary inline-flex items-center gap-1"
                   title="Next Page"
                 >
-                  Next ▶
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -2591,9 +2593,10 @@ export default function ConverterApp({
                                   setFontFamily(FONTS[0].family);
                                 }
                               }}
-                              className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer"
+                              className="text-red-500 hover:text-red-700 ml-1.5 font-bold cursor-pointer p-0.5 rounded hover:bg-canvas"
+                              title="Delete Custom Font"
                             >
-                              X
+                              <X size={12} />
                             </button>
                           </div>
                         ))}
@@ -2759,10 +2762,10 @@ export default function ConverterApp({
                                   onClick={() => {
                                     setAssignmentFields(assignmentFields.filter(f => f.id !== field.id));
                                   }}
-                                  className="text-red-500 hover:text-red-600 font-bold px-1.5 text-xs cursor-pointer"
+                                  className="text-red-500 hover:text-red-600 font-bold p-1 text-xs cursor-pointer rounded hover:bg-canvas"
                                   title="Delete Field"
                                 >
-                                  X
+                                  <X size={12} />
                                 </button>
                               </div>
                             </div>
@@ -2988,9 +2991,10 @@ export default function ConverterApp({
                         {!DEFAULT_PRESETS[name] && (
                           <button
                             onClick={() => deletePreset(name)}
-                            className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer"
+                            className="text-red-500 hover:text-red-700 ml-1 font-bold cursor-pointer p-0.5 rounded hover:bg-canvas"
+                            title="Delete Preset"
                           >
-                            X
+                            <X size={11} />
                           </button>
                         )}
                       </div>
@@ -3085,9 +3089,10 @@ export default function ConverterApp({
               </h3>
               <button
                 onClick={() => setIsFormulaModalOpen(false)}
-                className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
+                className="text-mute hover:text-primary p-1 rounded-full hover:bg-canvas-soft transition-colors cursor-pointer"
+                title="Close"
               >
-                X
+                <X size={14} />
               </button>
             </div>
             
@@ -3149,9 +3154,10 @@ export default function ConverterApp({
               </h3>
               <button
                 onClick={() => setIsTableModalOpen(false)}
-                className="text-mute hover:text-primary font-bold text-sm cursor-pointer px-1.5"
+                className="text-mute hover:text-primary p-1 rounded-full hover:bg-canvas-soft transition-colors cursor-pointer"
+                title="Close"
               >
-                X
+                <X size={14} />
               </button>
             </div>
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { FONTS, CATEGORIES } from '../../lib/fonts';
 
 export default function FontPreviewApp() {
@@ -105,10 +106,10 @@ export default function FontPreviewApp() {
             <div className="flex justify-end pt-2 border-t border-hairline mt-auto">
               <a
                 href={`/?font=${encodeURIComponent(font.family)}`}
-                className="text-[10px] font-mono text-link hover:underline font-semibold flex items-center space-x-1"
+                className="text-[10px] font-mono text-link hover:underline font-semibold flex items-center gap-1 group/btn"
               >
                 <span>USE FONT IN CONVERTER</span>
-                <span>Open</span>
+                <ArrowRight size={12} className="transition-transform group-hover/btn:translate-x-0.5" />
               </a>
             </div>
           </div>
