@@ -271,7 +271,7 @@ const drawTableToDataUrl = (
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
+    if (!ctx || !rows || !rows.length || !rows[0]?.length) {
       resolve('');
       return;
     }
@@ -426,7 +426,7 @@ export default function ConverterApp({
 }) {
   // Config state
   const [text, setText] = useState(SAMPLE_TEXT);
-  const [fontFamily, setFontFamily] = useState(defaultFont || 'Architects Daughter');
+  const [fontFamily, setFontFamily] = useState(() => (typeof window !== 'undefined' ? getFontFromUrl() : undefined) || defaultFont || 'Architects Daughter');
   const [paperStyle, setPaperStyle] = useState(defaultPaper || 'single-ruled');
   const [gridSize, setGridSize] = useState(30);
   const [inkColor, setInkColor] = useState('#0000ff');
@@ -690,22 +690,23 @@ export default function ConverterApp({
 
   // Load presets from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('scribble_presets');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('scribble_presets');
+      if (saved) {
         setPresets(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load user presets', e);
       }
+    } catch (e) {
+      console.error('Failed to load user presets', e);
     }
   }, []);
 
-  // Apply the font picked on the font preview page (?font=<family>). Applied in
-  // an effect (not a useState initializer) to avoid SSR/hydration mismatches.
+  // Apply the font picked on the font preview page (?font=<family>).
   useEffect(() => {
     const urlFont = getFontFromUrl();
-    if (urlFont && urlFont !== fontFamily) {
-      setFontFamily(urlFont);
+    if (urlFont) {
+      if (urlFont !== fontFamily) {
+        setFontFamily(urlFont);
+      }
       showToast(`Font loaded: ${urlFont}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -739,6 +740,12 @@ export default function ConverterApp({
         setError(message || 'Failed to render canvas');
         setRendering(false);
       }
+    };
+
+    workerRef.current.onerror = (e) => {
+      console.error('Render worker error:', e);
+      setError('Worker encountered an error while rendering.');
+      setRendering(false);
     };
 
     return () => {
@@ -818,7 +825,7 @@ export default function ConverterApp({
         isAssignmentHeaderEnabled,
         assignmentFields,
         lineMarginPadding,
-        backgroundImageBitmap: customBgBitmap,
+        backgroundImageBitmap: paperStyle === 'custom' ? customBgBitmap : null,
         dpiMultiplier: 1.0, // Render on screen at 1x
         paperWidth,
         paperHeight,
@@ -958,7 +965,11 @@ export default function ConverterApp({
 
     const nextPresets = { ...presets, [newPresetName]: presetObj };
     setPresets(nextPresets);
-    localStorage.setItem('scribble_presets', JSON.stringify(nextPresets));
+    try {
+      localStorage.setItem('scribble_presets', JSON.stringify(nextPresets));
+    } catch (e) {
+      console.warn('Unable to persist preset to localStorage', e);
+    }
     setNewPresetName('');
     showToast(`Saved Layout Preset: ${newPresetName}`);
   };
@@ -967,10 +978,22 @@ export default function ConverterApp({
     const nextPresets = { ...presets };
     delete nextPresets[name];
     setPresets(nextPresets);
-    localStorage.setItem('scribble_presets', JSON.stringify(nextPresets));
+    try {
+      localStorage.setItem('scribble_presets', JSON.stringify(nextPresets));
+    } catch (e) {
+      console.warn('Unable to update presets in localStorage', e);
+    }
   };
 
   const [customBgUrl, setCustomBgUrl] = useState<string>('');
+  const customBgUrlRef = useRef(customBgUrl);
+  customBgUrlRef.current = customBgUrl;
+
+  useEffect(() => {
+    return () => {
+      if (customBgUrlRef.current) URL.revokeObjectURL(customBgUrlRef.current);
+    };
+  }, []);
 
   // Custom paper file upload
   const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1028,6 +1051,11 @@ export default function ConverterApp({
         }
       };
 
+      exportWorker.onerror = (err) => {
+        exportWorker.terminate();
+        reject(err instanceof Error ? err : new Error((err as ErrorEvent).message || 'Worker render error'));
+      };
+
       const transferList: Transferable[] = [];
       workerElements.forEach(el => {
         if (el.bitmap) {
@@ -1077,7 +1105,7 @@ export default function ConverterApp({
         isAssignmentHeaderEnabled,
         assignmentFields,
         lineMarginPadding,
-        backgroundImageBitmap: customBgBitmap,
+        backgroundImageBitmap: paperStyle === 'custom' ? customBgBitmap : null,
         dpiMultiplier: dpi,
         paperWidth,
         paperHeight,
@@ -1094,7 +1122,11 @@ export default function ConverterApp({
     try {
       showToast('Compiling ZIP of handwritten pages...');
       const dpi = parseFloat(exportDpi);
-      const buffers = dpi === 1.0 ? pagesBuffers : await renderHighDpi(dpi);
+      let buffers = dpi === 1.0 && pagesBuffers.length > 0 ? pagesBuffers : await renderHighDpi(dpi);
+      if (!buffers || buffers.length === 0) {
+        showToast('No handwritten pages to export. Please add some text.', true);
+        return;
+      }
 
       const zipBlob = await createZipFromImages(buffers, 'handwritten-note');
       downloadBlob(zipBlob, 'handwritten-notes.zip');
@@ -1108,7 +1140,11 @@ export default function ConverterApp({
     try {
       showToast('Compiling high fidelity PDF...');
       const dpi = parseFloat(exportDpi);
-      const buffers = dpi === 1.0 ? pagesBuffers : await renderHighDpi(dpi);
+      let buffers = dpi === 1.0 && pagesBuffers.length > 0 ? pagesBuffers : await renderHighDpi(dpi);
+      if (!buffers || buffers.length === 0) {
+        showToast('No handwritten pages to export. Please add some text.', true);
+        return;
+      }
 
       const pdfBytes = await createPdfFromImages(buffers, exportPaper);
       const pdfBlob = new Blob([pdfBytes as any], { type: 'application/pdf' });

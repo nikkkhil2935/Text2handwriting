@@ -9,6 +9,9 @@ export async function createPdfFromImages(
   pagesBuffers: ArrayBuffer[],
   paperSize: 'a4' | 'letter' | 'legal'
 ): Promise<Uint8Array> {
+  if (!pagesBuffers || pagesBuffers.length === 0) {
+    throw new Error('No pages provided to create PDF');
+  }
   const { PDFDocument } = await import('pdf-lib');
   const pdfDoc = await PDFDocument.create();
   const dimensions = PAPER_SIZES[paperSize] || PAPER_SIZES.a4;
@@ -35,6 +38,9 @@ export async function createZipFromImages(
   pagesBuffers: ArrayBuffer[],
   filenamePrefix: string
 ): Promise<Blob> {
+  if (!pagesBuffers || pagesBuffers.length === 0) {
+    throw new Error('No pages provided to create ZIP');
+  }
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   const padDigits = Math.max(2, String(pagesBuffers.length).length);

@@ -185,6 +185,59 @@ export default function BulkApp() {
     }));
   };
 
+  // RFC 4180-compliant CSV parser supporting quoted strings, commas, and multi-line values
+  const parseCsv = (content: string): string[][] => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+      const nextChar = content[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            currentField += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          currentField += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          currentRow.push(currentField.trim());
+          currentField = '';
+        } else if (char === '\r') {
+          // ignore CR
+        } else if (char === '\n') {
+          currentRow.push(currentField.trim());
+          if (currentRow.some(f => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = '';
+        } else {
+          currentField += char;
+        }
+      }
+    }
+
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some(f => f.length > 0)) {
+        rows.push(currentRow);
+      }
+    }
+
+    return rows;
+  };
+
   // CSV/TXT importer
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -194,32 +247,49 @@ export default function BulkApp() {
     reader.onload = (event) => {
       const content = event.target?.result as string;
       if (file.name.endsWith('.csv')) {
-        // Parse CSV simple (one line = one doc or simple rows)
-        const lines = content.split(/\r?\n/).filter(line => line.trim());
-        const newDocs: DocumentItem[] = lines.map((line, idx) => {
-          // clean quotes
-          let cleanLine = line.replace(/^"(.*)"$/, '$1').trim();
-          if (cleanLine.startsWith('title,text') || cleanLine.startsWith('"title"')) return null; // skip headers
+        const rows = parseCsv(content);
+        if (rows.length === 0) {
+          showToast('CSV file is empty.', true);
+          return;
+        }
 
-          let title = `CSV Row ${String(idx + 1).padStart(2, '0')}`;
-          let text = cleanLine;
+        // Check if row 0 is a header (e.g. "title", "text", "name")
+        let startIndex = 0;
+        const firstCol = (rows[0][0] || '').toLowerCase();
+        if (firstCol === 'title' || firstCol === 'name' || firstCol === 'id') {
+          startIndex = 1;
+        }
 
-          // Simple comma split if quote delimited
-          const commaIdx = cleanLine.indexOf(',');
-          if (commaIdx > 0) {
-            title = cleanLine.substring(0, commaIdx).replace(/^"(.*)"$/, '$1');
-            text = cleanLine.substring(commaIdx + 1).replace(/^"(.*)"$/, '$1').replace(/""/g, '"');
+        const newDocs: DocumentItem[] = [];
+        for (let idx = startIndex; idx < rows.length; idx++) {
+          const row = rows[idx];
+          if (!row || row.length === 0 || row.every(c => !c)) continue;
+
+          let title = `CSV Row ${String(newDocs.length + 1).padStart(2, '0')}`;
+          let text = '';
+
+          if (row.length === 1) {
+            text = row[0];
+          } else {
+            title = row[0] || title;
+            text = row.slice(1).join(', ');
           }
 
-          return {
+          newDocs.push({
             id: String(Date.now() + idx),
             title,
             text,
             renderingStatus: 'idle'
-          };
-        }).filter(Boolean) as DocumentItem[];
+          });
+        }
+
+        if (newDocs.length === 0) {
+          showToast('No valid rows found in CSV.', true);
+          return;
+        }
 
         setDocs([...docs, ...newDocs]);
+        showToast(`Imported ${newDocs.length} documents from CSV.`);
       } else {
         // TXT: Treat file as one document
         setDocs([...docs, {
@@ -228,9 +298,11 @@ export default function BulkApp() {
           text: content,
           renderingStatus: 'idle'
         }]);
+        showToast(`Imported ${file.name}`);
       }
     };
     reader.readAsText(file);
+    if (e.target) e.target.value = '';
   };
 
   // Delimiter split mode
@@ -308,6 +380,11 @@ export default function BulkApp() {
           } else {
             reject(new Error(message || 'Failed to render'));
           }
+        };
+
+        worker.onerror = (err) => {
+          worker.terminate();
+          reject(err instanceof Error ? err : new Error((err as ErrorEvent).message || 'Worker render error'));
         };
 
         const customFontsPayload = [];
@@ -426,6 +503,11 @@ export default function BulkApp() {
         allBuffers.push(...d.renderedPages);
       }
     });
+
+    if (allBuffers.length === 0) {
+      showToast('No rendered pages to export.', true);
+      return;
+    }
 
     try {
       const pdfBytes = await createPdfFromImages(allBuffers, exportPaperSize);

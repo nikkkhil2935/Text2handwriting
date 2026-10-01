@@ -463,17 +463,21 @@ self.onmessage = async function(e) {
       
       const headerY = mTop - fSize * 0.4;
       
+      const formatH = (str) => str
+        .replace(/{page}/g, String(pageIdx + 1))
+        .replace(/{pages}/g, String(pages.length));
+
       if (headerLeft) {
         ctx.textAlign = 'left';
-        ctx.fillText(headerLeft, mLeft, headerY);
+        ctx.fillText(formatH(headerLeft), mLeft, headerY);
       }
       if (headerCenter) {
         ctx.textAlign = 'center';
-        ctx.fillText(headerCenter, w / 2, headerY);
+        ctx.fillText(formatH(headerCenter), w / 2, headerY);
       }
       if (headerRight) {
         ctx.textAlign = 'right';
-        ctx.fillText(headerRight, w - mRight, headerY);
+        ctx.fillText(formatH(headerRight), w - mRight, headerY);
       }
       ctx.restore();
     }
@@ -757,7 +761,7 @@ function drawPaperBackground(ctx, w, h, style, mLeft, mRight, mTop, mBottom, gSi
   }
   ctx.fillRect(0, 0, w, h);
 
-  if (backgroundImageBitmap) {
+  if (style === 'custom' && backgroundImageBitmap) {
     // Custom paper upload
     ctx.drawImage(backgroundImageBitmap, 0, 0, w, h);
     ctx.restore();

@@ -41,7 +41,12 @@
     if (!banner || !acceptBtn || !declineBtn) return;
 
     // Check if consent was already given
-    const consent = localStorage.getItem('cookie-consent');
+    let consent = null;
+    try {
+      consent = localStorage.getItem('cookie-consent');
+    } catch (e) {
+      // localStorage unavailable or restricted
+    }
     if (!consent) {
       // Show the banner with a slight delay
       setTimeout(() => {
@@ -50,7 +55,11 @@
     }
 
     acceptBtn.addEventListener('click', () => {
-      localStorage.setItem('cookie-consent', 'accepted');
+      try {
+        localStorage.setItem('cookie-consent', 'accepted');
+      } catch (e) {
+        // storage unavailable
+      }
       // Load analytics now that consent was granted. Ad units listen for the
       // consent event and load the AdSense SDK lazily at the slot sites.
       if (window.__loadAnalytics) {
@@ -61,7 +70,11 @@
     });
 
     declineBtn.addEventListener('click', () => {
-      localStorage.setItem('cookie-consent', 'declined');
+      try {
+        localStorage.setItem('cookie-consent', 'declined');
+      } catch (e) {
+        // storage unavailable
+      }
       hideBanner();
     });
 

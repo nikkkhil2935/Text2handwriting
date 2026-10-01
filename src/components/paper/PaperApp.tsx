@@ -19,14 +19,19 @@ export default function PaperApp() {
 
   const [previewUrl, setPreviewUrl] = useState('');
   const [generating, setGenerating] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastPreviewUrlRef = useRef('');
 
   useEffect(() => {
     drawPaperPreview();
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
   }, [paperStyle, gridSize, lineColor, marginColor, paperColor, hasVerticalMargin, marginLeft, marginTop, marginRight, marginBottom]);
+
+  useEffect(() => {
+    return () => {
+      if (lastPreviewUrlRef.current) {
+        URL.revokeObjectURL(lastPreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   const drawPaperToCanvas = (canvas: OffscreenCanvas, scale: number) => {
     const ctx = canvas.getContext('2d');
@@ -156,8 +161,12 @@ export default function PaperApp() {
     const offscreen = new OffscreenCanvas(width * scale, height * scale);
     drawPaperToCanvas(offscreen, scale);
     offscreen.convertToBlob({ type: 'image/png' }).then((blob) => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(blob));
+      const newUrl = URL.createObjectURL(blob);
+      if (lastPreviewUrlRef.current) {
+        URL.revokeObjectURL(lastPreviewUrlRef.current);
+      }
+      lastPreviewUrlRef.current = newUrl;
+      setPreviewUrl(newUrl);
     });
   };
 
@@ -244,7 +253,7 @@ export default function PaperApp() {
 
         if (paperStyle === 'graph') {
           for (const x of verticalRules) {
-            drawLine(x, mTop, x, h - mBottom, lineColorRgb, 1 * s);
+            drawLine(x, mBottom, x, h - mTop, lineColorRgb, 1 * s);
           }
           for (const y of horizontalRules) {
             drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
@@ -343,17 +352,22 @@ export default function PaperApp() {
             </div>
 
             {hasVerticalMargin && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold uppercase text-body mb-1">Margin Color</label>
-                  <input type="color" value={marginColor} onChange={(e) => setMarginColor(e.target.value)} className="w-full h-8 border border-hairline rounded cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block font-semibold uppercase text-body mb-1">Left Margin</label>
-                  <input type="number" value={marginLeft} onChange={(e) => setMarginLeft(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
-                </div>
+              <div>
+                <label className="block font-semibold uppercase text-body mb-1">Margin Color</label>
+                <input type="color" value={marginColor} onChange={(e) => setMarginColor(e.target.value)} className="w-full h-8 border border-hairline rounded cursor-pointer" />
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold uppercase text-body mb-1">Left Margin</label>
+                <input type="number" value={marginLeft} onChange={(e) => setMarginLeft(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+              </div>
+              <div>
+                <label className="block font-semibold uppercase text-body mb-1">Right Margin</label>
+                <input type="number" value={marginRight} onChange={(e) => setMarginRight(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

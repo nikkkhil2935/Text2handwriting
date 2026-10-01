@@ -57,13 +57,21 @@ export default function SignatureApp() {
     ctx.restore();
   };
 
+  const getCanvasCoordinates = (clientX: number, clientY: number, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
   // Freehand drawing handlers
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = drawingCanvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY, canvas);
     
     setIsDrawing(true);
     setStrokes([...strokes, [{ x, y }]]);
@@ -73,12 +81,11 @@ export default function SignatureApp() {
     if (!isDrawing) return;
     const canvas = drawingCanvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if (!canvas || !ctx || strokes.length === 0) return;
+    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY, canvas);
 
     const currentStroke = strokes[strokes.length - 1];
+    if (!currentStroke || currentStroke.length === 0) return;
     const updatedStroke = [...currentStroke, { x, y }];
     const updatedStrokes = [...strokes.slice(0, -1), updatedStroke];
     setStrokes(updatedStrokes);
@@ -103,10 +110,8 @@ export default function SignatureApp() {
     if (e.touches.length === 0) return;
     const canvas = drawingCanvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(touch.clientX, touch.clientY, canvas);
     
     setIsDrawing(true);
     setStrokes([...strokes, [{ x, y }]]);
@@ -116,13 +121,12 @@ export default function SignatureApp() {
     if (!isDrawing) return;
     const canvas = drawingCanvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    const rect = canvas.getBoundingClientRect();
+    if (!canvas || !ctx || strokes.length === 0) return;
     const touch = e.touches[0];
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    const { x, y } = getCanvasCoordinates(touch.clientX, touch.clientY, canvas);
 
     const currentStroke = strokes[strokes.length - 1];
+    if (!currentStroke || currentStroke.length === 0) return;
     const updatedStroke = [...currentStroke, { x, y }];
     const updatedStrokes = [...strokes.slice(0, -1), updatedStroke];
     setStrokes(updatedStrokes);
@@ -159,7 +163,7 @@ export default function SignatureApp() {
     }, 'image/png');
   };
 
-  const exportSvg = () => {
+  const exportSvg = async () => {
     if (activeTab === 'draw') {
       // Generate SVG path for manual sketch
       const width = drawingCanvasRef.current?.width || 600;
@@ -183,14 +187,30 @@ export default function SignatureApp() {
       const width = canvasRef.current?.width || 600;
       const height = canvasRef.current?.height || 200;
       const font = signatureFonts.find(f => f.family === fontFamily) || signatureFonts[0];
-      const fontUrl = `${window.location.origin}${font.path}`;
+      let fontSrc = `url('${window.location.origin}${font.path}') format('woff2')`;
+
+      try {
+        const res = await fetch(font.path);
+        if (res.ok) {
+          const buf = await res.arrayBuffer();
+          let binary = '';
+          const bytes = new Uint8Array(buf);
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+          fontSrc = `url('data:font/woff2;base64,${base64}') format('woff2')`;
+        }
+      } catch (err) {
+        console.warn('Could not embed font base64 in SVG', err);
+      }
       
       const svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
         <defs>
           <style>
             @font-face {
               font-family: '${fontFamily}';
-              src: url('${fontUrl}') format('woff2');
+              src: ${fontSrc};
             }
             .sig-text {
               font-family: '${fontFamily}', cursive;
