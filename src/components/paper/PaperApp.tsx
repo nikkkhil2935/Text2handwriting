@@ -1,21 +1,116 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Settings, Layers, RefreshCw, FileText } from 'lucide-react';
+import { Download, Settings, Layers, RefreshCw, FileText, Sparkles } from 'lucide-react';
 import { downloadBlob } from '../../lib/exporter';
 import { computePdfLayout, dotPdfPositions, hexToRgb, horizontalRulePdfYs, verticalRuleXs } from '../../lib/paper-pdf';
+
+interface PaperPreset {
+  id: string;
+  name: string;
+  badge: string;
+  paperStyle: string;
+  gridSize: number;
+  lineColor: string;
+  paperColor: string;
+  marginColor: string;
+  hasVerticalMargin: boolean;
+  marginLeft: number;
+  marginRight: number;
+  marginTop: number;
+  marginBottom: number;
+}
+
+const PAPER_PRESETS: PaperPreset[] = [
+  {
+    id: 'college-ruled',
+    name: 'College Ruled',
+    badge: '7.1mm',
+    paperStyle: 'single-ruled',
+    gridSize: 28,
+    lineColor: '#b0c4de',
+    paperColor: '#ffffff',
+    marginColor: '#f87171',
+    hasVerticalMargin: true,
+    marginLeft: 75,
+    marginRight: 40,
+    marginTop: 65,
+    marginBottom: 50
+  },
+  {
+    id: 'wide-ruled',
+    name: 'Wide Ruled',
+    badge: '8.7mm',
+    paperStyle: 'single-ruled',
+    gridSize: 34,
+    lineColor: '#b0c4de',
+    paperColor: '#ffffff',
+    marginColor: '#f87171',
+    hasVerticalMargin: true,
+    marginLeft: 80,
+    marginRight: 40,
+    marginTop: 70,
+    marginBottom: 50
+  },
+  {
+    id: 'engineering-grid',
+    name: 'Engineering Grid',
+    badge: '5mm',
+    paperStyle: 'graph',
+    gridSize: 20,
+    lineColor: '#c2ded1',
+    paperColor: '#fafdfb',
+    marginColor: '#10b981',
+    hasVerticalMargin: false,
+    marginLeft: 40,
+    marginRight: 40,
+    marginTop: 40,
+    marginBottom: 40
+  },
+  {
+    id: 'dot-journal',
+    name: 'Dot Grid Journal',
+    badge: 'Bullet',
+    paperStyle: 'dot-grid',
+    gridSize: 22,
+    lineColor: '#9ca3af',
+    paperColor: '#ffffff',
+    marginColor: '#ffadad',
+    hasVerticalMargin: false,
+    marginLeft: 40,
+    marginRight: 40,
+    marginTop: 40,
+    marginBottom: 40
+  },
+  {
+    id: 'legal-pad',
+    name: 'Yellow Legal Pad',
+    badge: 'Classic',
+    paperStyle: 'legal',
+    gridSize: 30,
+    lineColor: '#b8b29f',
+    paperColor: '#fff8dc',
+    marginColor: '#ef4444',
+    hasVerticalMargin: true,
+    marginLeft: 80,
+    marginRight: 40,
+    marginTop: 70,
+    marginBottom: 50
+  }
+];
 
 export default function PaperApp() {
   const [paperStyle, setPaperStyle] = useState('single-ruled');
   const [gridSize, setGridSize] = useState(30);
-  const [lineColor, setLineColor] = useState('#ebebeb');
-  const [marginColor, setMarginColor] = useState('#ffadad');
+  const [lineColor, setLineColor] = useState('#b0c4de');
+  const [marginColor, setMarginColor] = useState('#f87171');
   const [paperColor, setPaperColor] = useState('#ffffff');
   const [hasVerticalMargin, setHasVerticalMargin] = useState(true);
-  const [marginLeft, setMarginLeft] = useState(60);
-  const [marginTop, setMarginTop] = useState(60);
-  const [marginRight, setMarginRight] = useState(60);
-  const [marginBottom, setMarginBottom] = useState(60);
+  const [marginLeft, setMarginLeft] = useState(75);
+  const [marginTop, setMarginTop] = useState(65);
+  const [marginRight, setMarginRight] = useState(40);
+  const [marginBottom, setMarginBottom] = useState(50);
   const [pageCount, setPageCount] = useState(5);
   const [exportPaperSize, setExportPaperSize] = useState<'a4' | 'letter' | 'legal'>('a4');
+  const [activePresetId, setActivePresetId] = useState<string>('college-ruled');
 
   const [previewUrl, setPreviewUrl] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -33,6 +128,20 @@ export default function PaperApp() {
     };
   }, []);
 
+  const applyPreset = (preset: PaperPreset) => {
+    setActivePresetId(preset.id);
+    setPaperStyle(preset.paperStyle);
+    setGridSize(preset.gridSize);
+    setLineColor(preset.lineColor);
+    setPaperColor(preset.paperColor);
+    setMarginColor(preset.marginColor);
+    setHasVerticalMargin(preset.hasVerticalMargin);
+    setMarginLeft(preset.marginLeft);
+    setMarginRight(preset.marginRight);
+    setMarginTop(preset.marginTop);
+    setMarginBottom(preset.marginBottom);
+  };
+
   const drawPaperToCanvas = (canvas: OffscreenCanvas, scale: number) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -48,15 +157,15 @@ export default function PaperApp() {
     ctx.fillRect(0, 0, w, h);
 
     const mLeft = marginLeft * scale;
-    const mRight = marginRight * scale;
     const mTop = marginTop * scale;
+    const mRight = marginRight * scale;
     const mBottom = marginBottom * scale;
     const gSize = gridSize * scale;
 
     ctx.strokeStyle = lineColor;
     ctx.lineWidth = 1 * scale;
 
-    if (paperStyle === 'single-ruled' || paperStyle === 'a4-notebook') {
+    if (paperStyle === 'single-ruled') {
       const startY = mTop;
       const endY = h - mBottom;
       for (let y = startY; y <= endY; y += gSize) {
@@ -189,7 +298,7 @@ export default function PaperApp() {
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      downloadBlob(zipBlob, 'paper-pages.zip');
+      downloadBlob(zipBlob, 'notebook-paper-pages.zip');
     } catch (e) {
       console.error('Export failed', e);
     } finally {
@@ -197,14 +306,11 @@ export default function PaperApp() {
     }
   };
 
-  // Vector PDF export — draws the exact same geometry as the canvas preview,
-  // but at the physical page size (A4/Letter/Legal) so rules print true-to-scale.
   const generatePdf = async () => {
     setGenerating(true);
     try {
       const { PDFDocument, rgb } = await import('pdf-lib');
       const pdfDoc = await PDFDocument.create();
-      // Map the 800px-wide canvas coordinate space onto the physical page size
       const layout = computePdfLayout(
         exportPaperSize,
         { left: marginLeft, right: marginRight, top: marginTop, bottom: marginBottom },
@@ -215,16 +321,23 @@ export default function PaperApp() {
 
       const lineColorRgb = rgb(...hexToRgb(lineColor));
       const marginColorRgb = rgb(...hexToRgb(marginColor));
-      // Legal pad keeps its hardcoded cream background (matches canvas preview)
       const baseColorRgb = paperStyle === 'legal' ? rgb(...hexToRgb('#fff8dc')) : rgb(...hexToRgb(paperColor));
 
-      // NOTE: canvas y grows downward; PDF y grows upward — helpers flip for us
       const horizontalRules = horizontalRulePdfYs(layout);
       const verticalRules = verticalRuleXs(layout);
 
       for (let i = 0; i < pageCount; i++) {
         const page = pdfDoc.addPage([w, h]);
-        const drawLine = (x1: number, y1: number, x2: number, y2: number, color: ReturnType<typeof rgb>, thickness: number) => {
+
+        page.drawRectangle({
+          x: 0,
+          y: 0,
+          width: w,
+          height: h,
+          color: baseColorRgb
+        });
+
+        const drawLine = (x1: number, y1: number, x2: number, y2: number, color: any, thickness: number) => {
           page.drawLine({
             start: { x: x1, y: y1 },
             end: { x: x2, y: y2 },
@@ -232,9 +345,8 @@ export default function PaperApp() {
             color
           });
         };
-        page.drawRectangle({ x: 0, y: 0, width: w, height: h, color: baseColorRgb });
 
-        if (paperStyle === 'single-ruled' || paperStyle === 'a4-notebook') {
+        if (paperStyle === 'single-ruled') {
           for (const y of horizontalRules) {
             drawLine(mLeft, y, w - mRight, y, lineColorRgb, 1 * s);
           }
@@ -288,109 +400,256 @@ export default function PaperApp() {
     }
   };
 
+  const getDimensionLabel = () => {
+    if (exportPaperSize === 'letter') return '8.5 × 11 in (216 × 279 mm) • US Letter';
+    if (exportPaperSize === 'legal') return '8.5 × 14 in (216 × 356 mm) • US Legal';
+    return '210 × 297 mm • Standard ISO A4';
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
+
+      {/* Preset Quick Chips Bar */}
+      <div className="bg-canvas border border-hairline rounded-lg p-3.5 shadow-xs font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <span className="font-bold uppercase tracking-wider text-primary flex items-center gap-1.5 shrink-0">
+          <Sparkles size={14} className="text-amber-500" />
+          <span>Paper Presets:</span>
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {PAPER_PRESETS.map(preset => (
+            <button
+              key={preset.id}
+              onClick={() => applyPreset(preset)}
+              className={`px-3 py-1 rounded-full border transition-all cursor-pointer flex items-center gap-1.5 ${
+                activePresetId === preset.id
+                  ? 'bg-primary text-on-primary border-primary font-bold shadow-xs'
+                  : 'bg-canvas-soft border-hairline text-body hover:text-primary hover:border-hairline-strong'
+              }`}
+            >
+              <span>{preset.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                activePresetId === preset.id ? 'bg-white/20 text-white' : 'bg-canvas-soft-2 text-mute'
+              }`}>
+                {preset.badge}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-6 w-full items-start">
+        
+        {/* Left Column: Canvas Preview */}
         <div className="w-full md:w-1/2 flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3 border-b border-hairline pb-2.5">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body">Paper Preview</span>
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Live Sheet Preview
+            </span>
+            <span className="text-[10px] font-mono text-mute bg-canvas-soft px-2 py-0.5 rounded border border-hairline">
+              Vector PDF Ready
+            </span>
           </div>
-          <div className="flex-grow bg-canvas-soft p-4 rounded border border-hairline flex items-center justify-center overflow-auto min-h-[400px]">
+
+          <div className="flex-grow bg-canvas-soft p-4 rounded-lg border border-hairline flex flex-col items-center justify-center overflow-auto min-h-[440px]">
             {previewUrl ? (
-              <img src={previewUrl} alt="Paper preview" className="w-full max-w-[400px] shadow rounded border object-contain bg-white" />
+              <img
+                src={previewUrl}
+                alt="Paper preview"
+                className="w-full max-w-[400px] shadow-lg rounded-sm border border-hairline object-contain bg-white transition-all hover:scale-[1.01]"
+              />
             ) : (
               <div className="w-full aspect-[1/1.41] max-w-[400px] bg-white flex items-center justify-center rounded shadow">
                 <RefreshCw size={24} className="animate-spin text-mute" />
               </div>
             )}
+
+            <div className="mt-4 text-[11px] font-mono text-mute flex items-center gap-2">
+              <span>{getDimensionLabel()}</span>
+            </div>
           </div>
         </div>
 
+        {/* Right Column: Settings */}
         <div className="w-full md:w-1/2 flex flex-col border border-hairline bg-canvas rounded-lg p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3 border-b border-hairline pb-2.5">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body">Paper Settings</span>
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-body">Paper Geometry & Colors</span>
           </div>
 
           <div className="space-y-4 text-xs font-mono">
             <div>
-              <label className="block font-semibold uppercase text-body mb-1">Paper Style</label>
-              <select value={paperStyle} onChange={(e) => setPaperStyle(e.target.value)} className="input-field w-full bg-canvas">
-                <option value="plain">Plain White</option>
-                <option value="single-ruled">Single Ruled</option>
-                <option value="double-ruled">Double Ruled</option>
-                <option value="a4-notebook">A4 Notebook</option>
-                <option value="legal">Legal Pad</option>
-                <option value="graph">Graph Grid</option>
-                <option value="dot-grid">Dot Grid</option>
+              <label className="block font-semibold uppercase text-body mb-1">Paper Layout Style</label>
+              <select
+                value={paperStyle}
+                onChange={(e) => {
+                  setPaperStyle(e.target.value);
+                  setActivePresetId('');
+                }}
+                className="input-field w-full bg-canvas cursor-pointer"
+              >
+                <option value="plain">Plain White Paper</option>
+                <option value="single-ruled">Single Ruled (Notebook)</option>
+                <option value="double-ruled">Double Ruled (Calligraphy / Handwriting)</option>
+                <option value="a4-notebook">A4 School Notebook</option>
+                <option value="legal">Yellow Legal Pad</option>
+                <option value="graph">Engineering Graph Grid</option>
+                <option value="dot-grid">Dot Grid Journal (Bullet)</option>
               </select>
             </div>
 
             {paperStyle !== 'plain' && (
               <div>
                 <div className="flex justify-between text-body mb-1">
-                  <span>Grid Size</span>
-                  <span>{gridSize}px</span>
+                  <span>Line Spacing / Grid Size</span>
+                  <span className="text-primary font-bold">{gridSize}px</span>
                 </div>
-                <input type="range" min="15" max="60" value={gridSize} onChange={(e) => setGridSize(parseInt(e.target.value))} className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer" />
+                <input
+                  type="range"
+                  min="15"
+                  max="60"
+                  value={gridSize}
+                  onChange={(e) => {
+                    setGridSize(parseInt(e.target.value));
+                    setActivePresetId('');
+                  }}
+                  className="w-full accent-primary bg-hairline h-1 rounded-lg cursor-pointer"
+                />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Line Color</label>
-                <input type="color" value={lineColor} onChange={(e) => setLineColor(e.target.value)} className="w-full h-8 border border-hairline rounded cursor-pointer" />
+                <label className="block font-semibold uppercase text-body mb-1">Rule Line Color</label>
+                <input
+                  type="color"
+                  value={lineColor}
+                  onChange={(e) => {
+                    setLineColor(e.target.value);
+                    setActivePresetId('');
+                  }}
+                  className="w-full h-8 border border-hairline rounded cursor-pointer"
+                />
               </div>
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Paper Color</label>
-                <input type="color" value={paperColor} onChange={(e) => setPaperColor(e.target.value)} className="w-full h-8 border border-hairline rounded cursor-pointer" />
+                <label className="block font-semibold uppercase text-body mb-1">Background Paper Color</label>
+                <input
+                  type="color"
+                  value={paperColor}
+                  onChange={(e) => {
+                    setPaperColor(e.target.value);
+                    setActivePresetId('');
+                  }}
+                  className="w-full h-8 border border-hairline rounded cursor-pointer"
+                />
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-1 bg-canvas-soft-2 px-2.5 rounded">
-              <label className="cursor-pointer select-none">Show Margin Line</label>
-              <input type="checkbox" checked={hasVerticalMargin} onChange={(e) => setHasVerticalMargin(e.target.checked)} className="w-4 h-4 accent-primary" />
+            <div className="flex items-center justify-between py-1 bg-canvas-soft-2 px-2.5 rounded border border-hairline">
+              <label className="cursor-pointer select-none">Show Vertical Margin Line</label>
+              <input
+                type="checkbox"
+                checked={hasVerticalMargin}
+                onChange={(e) => {
+                  setHasVerticalMargin(e.target.checked);
+                  setActivePresetId('');
+                }}
+                className="w-4 h-4 accent-primary cursor-pointer"
+              />
             </div>
 
             {hasVerticalMargin && (
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Margin Color</label>
-                <input type="color" value={marginColor} onChange={(e) => setMarginColor(e.target.value)} className="w-full h-8 border border-hairline rounded cursor-pointer" />
+                <label className="block font-semibold uppercase text-body mb-1">Margin Line Color</label>
+                <input
+                  type="color"
+                  value={marginColor}
+                  onChange={(e) => {
+                    setMarginColor(e.target.value);
+                    setActivePresetId('');
+                  }}
+                  className="w-full h-8 border border-hairline rounded cursor-pointer"
+                />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Left Margin</label>
-                <input type="number" value={marginLeft} onChange={(e) => setMarginLeft(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+                <label className="block font-semibold uppercase text-body mb-1">Left Margin (px)</label>
+                <input
+                  type="number"
+                  value={marginLeft}
+                  onChange={(e) => {
+                    setMarginLeft(parseInt(e.target.value) || 0);
+                    setActivePresetId('');
+                  }}
+                  className="input-field w-full h-8 bg-canvas"
+                />
               </div>
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Right Margin</label>
-                <input type="number" value={marginRight} onChange={(e) => setMarginRight(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+                <label className="block font-semibold uppercase text-body mb-1">Right Margin (px)</label>
+                <input
+                  type="number"
+                  value={marginRight}
+                  onChange={(e) => {
+                    setMarginRight(parseInt(e.target.value) || 0);
+                    setActivePresetId('');
+                  }}
+                  className="input-field w-full h-8 bg-canvas"
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Top Margin</label>
-                <input type="number" value={marginTop} onChange={(e) => setMarginTop(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+                <label className="block font-semibold uppercase text-body mb-1">Top Margin (px)</label>
+                <input
+                  type="number"
+                  value={marginTop}
+                  onChange={(e) => {
+                    setMarginTop(parseInt(e.target.value) || 0);
+                    setActivePresetId('');
+                  }}
+                  className="input-field w-full h-8 bg-canvas"
+                />
               </div>
               <div>
-                <label className="block font-semibold uppercase text-body mb-1">Bottom Margin</label>
-                <input type="number" value={marginBottom} onChange={(e) => setMarginBottom(parseInt(e.target.value) || 0)} className="input-field w-full h-8 bg-canvas" />
+                <label className="block font-semibold uppercase text-body mb-1">Bottom Margin (px)</label>
+                <input
+                  type="number"
+                  value={marginBottom}
+                  onChange={(e) => {
+                    setMarginBottom(parseInt(e.target.value) || 0);
+                    setActivePresetId('');
+                  }}
+                  className="input-field w-full h-8 bg-canvas"
+                />
               </div>
             </div>
 
+            {/* Export Configurations */}
             <div className="border-t border-hairline pt-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold uppercase text-body flex items-center"><Layers size={12} className="mr-1" /> Multi-Page Export</span>
+                <span className="font-semibold uppercase text-body flex items-center">
+                  <Layers size={12} className="mr-1.5" />
+                  PDF & Batch Export
+                </span>
+                <span className="text-[10px] text-mute">{pageCount} page(s)</span>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold uppercase text-body mb-1">Pages</label>
-                  <input type="number" min="1" max="100" value={pageCount} onChange={(e) => setPageCount(Math.max(1, parseInt(e.target.value) || 1))} className="input-field w-full h-8 bg-canvas" />
+                  <label className="block font-semibold uppercase text-body mb-1">Page Count</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={pageCount}
+                    onChange={(e) => setPageCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="input-field w-full h-8 bg-canvas"
+                  />
                 </div>
                 <div>
-                  <label className="block font-semibold uppercase text-body mb-1">Paper Size</label>
+                  <label className="block font-semibold uppercase text-body mb-1">Page Size</label>
                   <select
                     value={exportPaperSize}
                     onChange={(e) => setExportPaperSize(e.target.value as 'a4' | 'letter' | 'legal')}
@@ -402,27 +661,29 @@ export default function PaperApp() {
                   </select>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <button
                   onClick={generatePdf}
                   disabled={generating}
-                  className="btn-primary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="btn-primary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer font-bold font-mono"
                 >
                   <FileText size={14} />
-                  {generating ? 'Generating...' : 'Export PDF'}
+                  <span>{generating ? 'Generating PDF...' : 'Download PDF'}</span>
                 </button>
                 <button
                   onClick={generateMultiPage}
                   disabled={generating}
-                  className="btn-secondary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="btn-secondary h-9 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer font-bold font-mono"
                 >
                   <Download size={14} />
-                  Export ZIP
+                  <span>Download ZIP</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

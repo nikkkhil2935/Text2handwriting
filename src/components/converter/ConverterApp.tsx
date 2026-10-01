@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Download, RefreshCw, Save, Settings, FileText, Sparkles,
-  Info, Check, Upload, Trash2, Image, Table2, Sigma, Pencil, Loader2
+  Info, Check, Upload, Trash2, Image, Table2, Sigma, Pencil, Loader2,
+  Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
+  Indent, Outdent, Maximize2, Minimize2, Copy, Shuffle, FileUp
 } from 'lucide-react';
 import katex from 'katex';
 import { FONTS, CATEGORIES, getFontsByCategory, getDefaultBaselineOffset, resolveFontFamily } from '../../lib/fonts';
@@ -534,6 +536,7 @@ export default function ConverterApp({
   const [isUnderline, setIsUnderline] = useState(false);
   const [editMode, setEditMode] = useState<'edit' | 'preview'>('edit');
   const [scale, setScale] = useState(1);
+  const [isCanvasExpanded, setIsCanvasExpanded] = useState(false);
 
   // New Modals & PDF Import states
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
@@ -1156,6 +1159,36 @@ export default function ConverterApp({
     }
   };
 
+  const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charCount = text.length;
+  const estReadTime = Math.max(1, Math.ceil(wordCount / 180));
+
+  const randomizeRealism = () => {
+    setMessiness(Number((0.4 + Math.random() * 0.8).toFixed(2)));
+    setRotation(Number((1.0 + Math.random() * 2.0).toFixed(1)));
+    setVJitter(Number((0.8 + Math.random() * 1.2).toFixed(1)));
+    setHJitter(Number((0.4 + Math.random() * 0.8).toFixed(1)));
+    setBaselineDrift(Number((0.5 + Math.random() * 1.0).toFixed(1)));
+    setSeed(Math.floor(Math.random() * 100000));
+    showToast('Realism randomized!');
+  };
+
+  const copyRawText = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Text copied to clipboard!');
+    } catch {
+      showToast('Could not copy text to clipboard', true);
+    }
+  };
+
+  const clearSheetText = () => {
+    if (window.confirm('Clear all text from the current document?')) {
+      handleTextChange('');
+      showToast('Sheet cleared');
+    }
+  };
+
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent, el: CanvasElement) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1584,6 +1617,80 @@ export default function ConverterApp({
         </div>
       )}
 
+      {/* Top Document Metrics & Quick Action Bar */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-3 p-3 bg-canvas border border-hairline rounded-lg shadow-xs font-mono text-xs">
+        {/* Left: Document Metrics Badge */}
+        <div className="flex flex-wrap items-center gap-2 text-mute text-[11px]">
+          <span className="font-bold text-primary flex items-center gap-1.5">
+            <FileText size={13} className="text-link" />
+            <span>{pages.length} {pages.length === 1 ? 'Page' : 'Pages'}</span>
+          </span>
+          <span>•</span>
+          <span>{wordCount.toLocaleString()} words</span>
+          <span>•</span>
+          <span>{charCount.toLocaleString()} chars</span>
+          <span className="hidden sm:inline">•</span>
+          <span className="hidden sm:inline">~{estReadTime} min read</span>
+        </div>
+
+        {/* Right: Quick Actions & Export Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Randomize Realism */}
+          <button
+            onClick={randomizeRealism}
+            className="btn-secondary h-8 px-2.5 text-[11px] flex items-center gap-1.5 cursor-pointer font-medium"
+            title="Randomize realism parameters (jitter, slant & drift)"
+          >
+            <Shuffle size={12} className="text-amber-500" />
+            <span className="hidden sm:inline">Randomize</span>
+          </button>
+
+          {/* Copy Text */}
+          <button
+            onClick={copyRawText}
+            className="btn-secondary h-8 px-2.5 text-[11px] flex items-center gap-1.5 cursor-pointer font-medium"
+            title="Copy raw text to clipboard"
+          >
+            <Copy size={12} />
+            <span className="hidden sm:inline">Copy Text</span>
+          </button>
+
+          {/* Clear Sheet */}
+          <button
+            onClick={clearSheetText}
+            className="btn-secondary h-8 px-2 text-[11px] flex items-center gap-1 cursor-pointer text-mute hover:text-red-500"
+            title="Clear text from sheet"
+          >
+            <Trash2 size={12} />
+          </button>
+
+          <div className="w-[1px] h-5 bg-hairline hidden sm:block"></div>
+
+          {/* DPI Multiplier Quick Selector */}
+          <select
+            value={exportDpi}
+            onChange={(e) => setExportDpi(e.target.value)}
+            className="input-field h-8 text-[11px] bg-canvas border border-hairline py-0 px-2 rounded-md outline-none cursor-pointer w-auto"
+            title="PDF Export Quality / Resolution"
+          >
+            <option value="1.0">Screen DPI (Fast)</option>
+            <option value="2.0">Medium DPI (150 DPI)</option>
+            <option value="3.0">Print High-Res (300 DPI)</option>
+          </select>
+
+          {/* Primary Quick Download PDF */}
+          <button
+            onClick={handleDownloadPdf}
+            disabled={rendering}
+            className="btn-primary h-8 px-3.5 text-[11px] flex items-center gap-1.5 font-bold cursor-pointer shadow-xs disabled:opacity-50"
+            title="Download high-resolution handwritten PDF"
+          >
+            {rendering ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+            <span>Export PDF</span>
+          </button>
+        </div>
+      </div>
+
       {/* Modern Formatting Toolbar */}
       <div className="w-full flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-between gap-3 md:gap-4 p-3 bg-canvas border border-hairline rounded-lg shadow-sm font-mono text-xs">
         <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -1621,62 +1728,72 @@ export default function ConverterApp({
             <div className="flex flex-wrap items-center border border-hairline rounded-md bg-canvas min-h-8">
               <button
                 onClick={() => handleToggleFormat('**')}
-                className={`px-2 md:px-3 h-8 font-bold border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
-                title="Toggle Bold Handwriting"
+                className={`w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer ${isBold ? 'bg-primary text-on-primary font-bold' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Bold (Markdown **text**)"
+                aria-label="Toggle Bold"
               >
-                B
+                <Bold size={13} />
               </button>
               <button
                 onClick={() => handleToggleFormat('*')}
-                className={`px-2 md:px-3 h-8 italic border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
-                title="Toggle Italic (Slant)"
+                className={`w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer ${isItalic ? 'bg-primary text-on-primary font-bold' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Italic / Slant (Markdown *text*)"
+                aria-label="Toggle Italic"
               >
-                I
+                <Italic size={13} />
               </button>
               <button
                 onClick={() => handleToggleFormat('__')}
-                className={`px-2 md:px-3 h-8 underline border-r border-hairline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary' : 'hover:bg-canvas-soft text-body'}`}
-                title="Toggle Underline"
+                className={`w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer ${isUnderline ? 'bg-primary text-on-primary font-bold' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Underline (Markdown __text__)"
+                aria-label="Toggle Underline"
               >
-                U
+                <Underline size={13} />
               </button>
               <button
                 onClick={() => insertTextAtCursor('\n- ')}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
-                title="Bullet List"
+                className="w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body"
+                title="Insert Bullet List"
+                aria-label="Insert Bullet List"
               >
-                List
+                <List size={13} />
               </button>
               <button
                 onClick={() => insertTextAtCursor('\n1. ')}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-mono"
-                title="Numbered List"
+                className="w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body"
+                title="Insert Numbered List"
+                aria-label="Insert Numbered List"
               >
-                1. List
-              </button>
-              <button
-                onClick={() => setLineMarginPadding(prev => Math.max(0, prev - 10))}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
-                title="Outdent"
-              >
-                Out
+                <ListOrdered size={13} />
               </button>
               <button
                 onClick={() => {
                   const nextAlign = alignment === 'left' ? 'center' : alignment === 'center' ? 'right' : 'left';
                   setAlignment(nextAlign);
                 }}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
-                title="Alignment"
+                className="w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body"
+                title={`Text Alignment: currently ${alignment}. Click to cycle.`}
+                aria-label={`Alignment: ${alignment}`}
               >
-                Align
+                {alignment === 'left' && <AlignLeft size={13} />}
+                {alignment === 'center' && <AlignCenter size={13} />}
+                {alignment === 'right' && <AlignRight size={13} />}
+              </button>
+              <button
+                onClick={() => setLineMarginPadding(prev => Math.max(0, prev - 10))}
+                className="w-8 h-8 flex items-center justify-center border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body"
+                title="Outdent Margin"
+                aria-label="Outdent Margin"
+              >
+                <Outdent size={13} />
               </button>
               <button
                 onClick={() => setLineMarginPadding(prev => Math.min(150, prev + 10))}
-                className="px-2 md:px-3 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body font-bold text-center"
-                title="Indent"
+                className="w-8 h-8 flex items-center justify-center transition-colors cursor-pointer hover:bg-canvas-soft text-body"
+                title="Indent Margin"
+                aria-label="Indent Margin"
               >
-                In
+                <Indent size={13} />
               </button>
             </div>
           </div>
@@ -1714,41 +1831,42 @@ export default function ConverterApp({
                   };
                   fileInput.click();
                 }}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
-                title="Insert Image"
+                className="px-2.5 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert Diagram / Image"
               >
-                <Image size={14} /> Image
+                <Image size={13} /> <span>Image</span>
               </button>
               <button
                 onClick={() => setIsTableModalOpen(true)}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
-                title="Insert Hand-Drawn Table"
+                className="px-2.5 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert Hand-Drawn Wobbly Table"
               >
-                <Table2 size={14} /> Table
+                <Table2 size={13} /> <span>Table</span>
               </button>
               <button
                 onClick={() => setIsFormulaModalOpen(true)}
-                className="px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
-                title="Insert LaTeX Formula"
+                className="px-2.5 h-8 border-r border-hairline transition-colors cursor-pointer hover:bg-canvas-soft text-body flex items-center gap-1 font-mono text-[11px]"
+                title="Insert LaTeX Math Formula"
               >
-                <Sigma size={14} /> Formula
+                <Sigma size={13} /> <span>Math</span>
               </button>
               <button
                 onClick={() => {
                   setIsDrawingMode(!isDrawingMode);
                 }}
-                className={`px-2 md:px-3 h-8 border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'hover:bg-canvas-soft text-body'}`}
-                title="Enable Sketch Drawing"
+                className={`px-2.5 h-8 border-r border-hairline transition-colors cursor-pointer flex items-center gap-1 font-mono text-[11px] ${isDrawingMode ? 'bg-primary text-on-primary font-bold shadow-xs' : 'hover:bg-canvas-soft text-body'}`}
+                title="Toggle Sketch Drawing Overlay"
               >
-                <Pencil size={14} /> Sketch
+                <Pencil size={13} /> <span>Sketch</span>
               </button>
               <button
                 disabled={isPdfImporting}
                 onClick={() => pdfFileInputRef.current?.click()}
-                className="px-2 md:px-3 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
+                className="px-2.5 h-8 transition-colors cursor-pointer hover:bg-canvas-soft text-body disabled:opacity-50 flex items-center gap-1 font-mono text-[11px]"
                 title="Import Text from PDF"
               >
-                {isPdfImporting ? <><Loader2 size={14} className="animate-spin" />...</> : 'Import PDF'}
+                {isPdfImporting ? <Loader2 size={13} className="animate-spin" /> : <FileUp size={13} />}
+                <span>{isPdfImporting ? 'Reading...' : 'PDF'}</span>
               </button>
               <input
                 type="file"
@@ -1844,7 +1962,7 @@ export default function ConverterApp({
           <div className="flex items-center bg-canvas-soft-2 p-0.5 rounded-md border border-hairline h-8 text-[11px]">
             <button
               onClick={() => setEditMode('edit')}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'edit' ? 'bg-canvas text-primary font-semibold shadow-xs' : 'text-mute hover:text-body'}`}
             >
               Edit Paper
             </button>
@@ -1853,7 +1971,7 @@ export default function ConverterApp({
                 setEditMode('preview');
                 triggerRender();
               }}
-              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' ? 'bg-canvas text-primary font-semibold shadow-sm' : 'text-mute hover:text-body'}`}
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${editMode === 'preview' ? 'bg-canvas text-primary font-semibold shadow-xs' : 'text-mute hover:text-body'}`}
             >
               Realism Preview
             </button>
@@ -1868,27 +1986,35 @@ export default function ConverterApp({
         <div className="w-full lg:w-[65%] flex flex-col items-center justify-start py-4 bg-canvas-soft border border-hairline rounded-lg shadow-sm min-h-[500px]">
 
           {/* Preview Header Bar */}
-          <div className="w-full max-w-[480px] flex items-center justify-between border-b border-hairline pb-2 mb-4 px-2 font-mono text-xs text-mute uppercase font-bold tracking-wider select-none">
+          <div className={`w-full ${isCanvasExpanded ? 'max-w-[700px]' : 'max-w-[480px]'} flex items-center justify-between border-b border-hairline pb-2 mb-4 px-2 font-mono text-xs text-mute uppercase font-bold tracking-wider select-none transition-all duration-200`}>
             <span className="flex items-center gap-1.5 text-primary">
               <span className={`w-2 h-2 rounded-full ${editMode === 'edit' ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
-              {editMode === 'edit' ? 'Edit Paper Mode' : 'Realism Preview'}
+              {editMode === 'edit' ? 'Interactive Sheet' : 'Realism Preview'}
             </span>
-            {editMode === 'preview' && pages.length > 0 && (
-              <span>
-                Page {previewPageIdx + 1} of {pages.length}
-              </span>
-            )}
-            {editMode === 'edit' && (
-              <span>Interactive Sheet</span>
-            )}
+
+            <div className="flex items-center gap-3">
+              {pages.length > 0 && (
+                <span>
+                  Page {previewPageIdx + 1} of {pages.length}
+                </span>
+              )}
+
+              {/* Sheet Width Expand / Focus Mode */}
+              <button
+                onClick={() => setIsCanvasExpanded(!isCanvasExpanded)}
+                className="p-1 rounded hover:bg-canvas text-body hover:text-primary transition-colors cursor-pointer flex items-center gap-1 text-[10px] font-mono"
+                title={isCanvasExpanded ? 'Switch to Standard Width' : 'Expand Sheet Width (Focus Mode)'}
+              >
+                {isCanvasExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                <span className="hidden sm:inline">{isCanvasExpanded ? 'Standard' : 'Expand'}</span>
+              </button>
+            </div>
           </div>
-
-
 
           {/* A4 Bounding Sheet Container */}
           <div
             id="preview-container"
-            className="relative w-full max-w-[480px] aspect-[800/1130] bg-white rounded border border-hairline shadow-md overflow-hidden select-none"
+            className={`relative w-full ${isCanvasExpanded ? 'max-w-[700px]' : 'max-w-[480px]'} aspect-[800/1130] bg-white rounded border border-hairline shadow-md overflow-hidden select-none transition-all duration-200`}
           >
             {editMode === 'edit' ? (
               /* Inline Editable Textarea styled exactly like ruled notebook paper */
