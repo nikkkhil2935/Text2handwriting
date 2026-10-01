@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, Settings, Layers, RefreshCw, FileText, Sparkles } from 'lucide-react';
 import { downloadBlob } from '../../lib/exporter';
 import { computePdfLayout, dotPdfPositions, hexToRgb, horizontalRulePdfYs, verticalRuleXs } from '../../lib/paper-pdf';
+import { PDFDocument, rgb } from 'pdf-lib';
+import JSZip from 'jszip';
 
 interface PaperPreset {
   id: string;
@@ -285,7 +287,6 @@ export default function PaperApp() {
       const scale = 2;
       const width = 800;
       const height = 1130;
-      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
 
       for (let i = 0; i < pageCount; i++) {
@@ -309,7 +310,6 @@ export default function PaperApp() {
   const generatePdf = async () => {
     setGenerating(true);
     try {
-      const { PDFDocument, rgb } = await import('pdf-lib');
       const pdfDoc = await PDFDocument.create();
       const layout = computePdfLayout(
         exportPaperSize,

@@ -8,7 +8,10 @@ export default defineConfig({
   trailingSlash: 'never',
   output: 'static',
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: ['pdf-lib', 'jszip', 'katex']
+    }
   },
   integrations: [
     react(),

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { FONTS, getDefaultBaselineOffset } from '../../lib/fonts';
 import { createPdfFromImages, downloadBlob } from '../../lib/exporter';
+import JSZip from 'jszip';
 
 function Toast({ toast }: { toast: { message: string; isError?: boolean } | null }) {
   if (!toast) return null;
@@ -468,7 +469,6 @@ export default function BulkApp() {
       return;
     }
 
-    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     const docDigits = Math.max(2, String(renderedDocs.length).length);
 
@@ -527,7 +527,6 @@ export default function BulkApp() {
       return;
     }
 
-    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     const docDigits = Math.max(2, String(renderedDocs.length).length);
 
