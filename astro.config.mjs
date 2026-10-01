@@ -3,14 +3,56 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 
+/** Vite plugin to automatically reconcile stale browser cache hashes and prevent 504 Outdated Optimize Dep */
+function handleStaleOptimizeDeps() {
+  return {
+    name: 'handle-stale-optimize-deps',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && req.url.includes('/node_modules/.vite/deps/lucide-react.js')) {
+          res.writeHead(302, { Location: '/node_modules/lucide-react/dist/esm/lucide-react.mjs' });
+          res.end();
+          return;
+        }
+        if (req.url && req.url.includes('/node_modules/.vite/deps/')) {
+          const meta = server._optimizeDepsMetadata;
+          if (meta && meta.browserHash) {
+            try {
+              const u = new URL(req.url, 'http://localhost');
+              const v = u.searchParams.get('v');
+              if (v && v !== meta.browserHash) {
+                u.searchParams.set('v', meta.browserHash);
+                req.url = u.pathname + u.search;
+              }
+            } catch {
+              // ignore url parse error
+            }
+          }
+        }
+        next();
+      });
+    }
+  };
+}
+
 export default defineConfig({
   site: 'https://texttohandwriting.me',
   trailingSlash: 'never',
   output: 'static',
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), handleStaleOptimizeDeps()],
     optimizeDeps: {
-      include: ['pdf-lib', 'jszip', 'katex']
+      include: [
+        'pdf-lib',
+        'jszip',
+        'katex',
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-dom/client'
+      ],
+      exclude: ['lucide-react']
     }
   },
   integrations: [
